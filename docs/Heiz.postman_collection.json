@@ -1,0 +1,378 @@
+{
+  "info": {
+    "name": "Heiz API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/"
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health DB",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health/db",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health",
+            "db"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List earthquakes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes?limit=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List earthquakes M>=5 BMKG",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes?min_magnitude=5&source=BMKG",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ],
+          "query": [
+            {
+              "key": "min_magnitude",
+              "value": "5"
+            },
+            {
+              "key": "source",
+              "value": "BMKG"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get earthquake (set id)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get earthquake 404",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/999999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create (201)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_description\": \"Test location, Bogor\",\n  \"latitude\": -6.69,\n  \"longitude\": 106.63,\n  \"magnitude\": 2.5,\n  \"depth_km\": 9,\n  \"occurred_at\": \"2026-10-16T03:21:55Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create invalid magnitude (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_description\": \"Test location, Bogor\",\n  \"latitude\": -6.69,\n  \"longitude\": 106.63,\n  \"magnitude\": 11,\n  \"depth_km\": 9,\n  \"occurred_at\": \"2026-10-16T03:21:55Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create without key (401)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_description\": \"Test location, Bogor\",\n  \"latitude\": -6.69,\n  \"longitude\": 106.63,\n  \"magnitude\": 2.5,\n  \"depth_km\": 9,\n  \"occurred_at\": \"2026-10-16T03:21:55Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "PUT (replace) - set id of a MANUAL record",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "1"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_description\": \"Replaced place\"\n}"
+        }
+      }
+    },
+    {
+      "name": "PATCH - set id of a MANUAL record",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "1"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"magnitude\": 3.1\n}"
+        }
+      }
+    },
+    {
+      "name": "DELETE - set id of a MANUAL record",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Sources",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/sources",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "sources"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Sync logs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/sync-logs?limit=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "sync-logs"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Trigger sync",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/sync",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "sync"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feeds\": [\n    \"gempaterkini\"\n  ]\n}"
+        }
+      }
+    }
+  ]
+}
