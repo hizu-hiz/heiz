@@ -5,7 +5,7 @@
 .site-header nav { display: flex; gap: 1.1rem; flex-wrap: wrap; }
 .site-header nav a { font-weight: 700; }
 .site-header nav a[aria-current="page"] { text-decoration-thickness: 3px; }
-.site-footer { background: #0b0d07; color: var(--on-dark-muted); font-size: .88rem; padding: 2.2rem 1.6rem; --focus: var(--accent); }
+.site-footer { background: #0a0a14; color: var(--on-dark-muted); font-size: .88rem; padding: 2.2rem 1.6rem; --focus: var(--accent); }
 .site-footer .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: .7rem; }
 .site-footer a { color: var(--link-dark); }
 .site-footer .home { display: block; width: min(260px, 70%); margin-bottom: .6rem; }

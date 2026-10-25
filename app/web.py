@@ -15,7 +15,7 @@ WEB = Path(__file__).resolve().parent.parent / "web"
 # Scripts only from our own origin; forms cannot submit anywhere (the login uses fetch(), never a form post).
 PAGE_CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; "
-    "img-src 'self' data: https://*.basemaps.cartocdn.com https://server.arcgisonline.com "
+    "img-src 'self' data: https://server.arcgisonline.com "
     "https://*.tile.opentopomap.org https://static.bmkg.go.id; connect-src 'self'; "
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )

@@ -1,100 +1,82 @@
-/* Seismograph trails for loading states. Three channels scroll a trace across the canvas. Each pass (iteration)
-   draws new random parameters, and sharpness changes along the trace: calm and rounded at the start, the sharp
-   S-wave in the middle, a ragged decay at the end. The trail tapers in width and steps down in opacity behind the head.
+/* Seismograph trace for the splash. One continuous trace scrolls right to left. Every sample is random: a white-noise part
+   and a smoothed (low-pass) part are mixed in a proportion that is re-rolled for each short burst, together with the
+   burst's strength, so the trace is ragged and uneven rather than periodic. The trace is split into zones that line up with
+   the status pins: ok = full activity, pending = faint, bad / skipped = a flat line drawn in the alert colour.
    Solid colour only. Reduced-motion users get one still frame. */
-const COLORS = ['#fafa64', '#d3e58f', '#8fa54a'];
-const BANDS = 14;                      // the trail is drawn in bands, each with its own width and opacity
 const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rand = (a, b) => a + Math.random() * (b - a);
-const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (t) => t * t * (3 - 2 * t);
+const GAIN = { ok: 1, pending: 0.22, bad: 0, skip: 0 };
+const STEP = 2;                         // CSS px between samples
+const SPEED = 80;                       // CSS px per second
 
-function newIteration(channel) {
-  return {
-    p: rand(0.12, 0.3),                 // P-wave arrival (fraction of the width)
-    s: rand(0.34, 0.6),                 // S-wave arrival
-    peak: rand(0.55, 0.95) * (1 - channel * 0.18),
-    decay: rand(2.2, 4.6),
-    freq: rand(26, 52),
-    sharpStart: rand(0, 0.25), sharpMid: rand(0.55, 1), sharpEnd: rand(0.15, 0.95),
-    seed: Math.random() * 1000, tilt: rand(-0.04, 0.04),
-  };
+function cssColor(name, fallback) {
+  try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback; } catch { return fallback; }
 }
 
-function sharpnessAt(it, x) {           // 0 = smooth sine, 1 = jagged spikes
-  return x < 0.5 ? it.sharpStart + (it.sharpMid - it.sharpStart) * smooth(x / 0.5)
-    : it.sharpMid + (it.sharpEnd - it.sharpMid) * smooth((x - 0.5) / 0.5);
-}
-function amplitudeAt(it, x) {
-  if (x < it.p) return 0.04;
-  if (x < it.s) return 0.04 + 0.2 * smooth((x - it.p) / (it.s - it.p));
-  return 0.24 + (it.peak - 0.24) * Math.exp(-it.decay * Math.max(0, x - it.s - 0.05)) * (x < it.s + 0.05 ? smooth((x - it.s) / 0.05) : 1);
-}
-function valueAt(it, x) {
-  const phase = x * it.freq + it.seed;
-  const smoothWave = Math.sin(phase) * 0.8 + Math.sin(phase * 0.43) * 0.2;
-  const tri = (2 / Math.PI) * Math.asin(Math.sin(phase * 1.31));
-  const noise = Math.sin(phase * 7.7 + it.seed) * Math.sin(phase * 3.1) ;
-  const sharpWave = Math.sign(tri) * Math.pow(Math.abs(tri), 0.45) * 0.8 + noise * 0.35;
-  const k = clamp(sharpnessAt(it, x));
-  return smoothWave * (1 - k) + sharpWave * k;
-}
-
-/** Starts the animation on a canvas. Returns { stop() }. */
-export function startSeismicTrails(canvas, { channels = 3, durationMs = 3600 } = {}) {
+/** Starts the trace. zones = number of status zones across the width. Returns { stop(), setZone(index, state) }. */
+export function startSeismicTrails(canvas, { zones = 3 } = {}) {
   const ctx = canvas.getContext('2d');
-  let w = 0; let h = 0; let raf = null; let startedAt = performance.now(); let stopped = false;
-  let iterations = Array.from({ length: channels }, (_, i) => newIteration(i));
-  let lastPass = -1;
+  const trace = cssColor('--trace', '#6c6cf0'); const alert = cssColor('--pink', '#f26d98');
+  let w = 0; let h = 0; let raf = null; let stopped = false; let prev = performance.now(); let acc = 0;
+  const state = Array.from({ length: zones }, () => 'pending'); const gain = Array.from({ length: zones }, () => GAIN.pending);
+  let samples = []; let lp = 0;
+  let burst = { left: 0, amp: 1, sharp: 0.5 };
 
+  const nextSample = () => {
+    if (burst.left <= 0) burst = { left: Math.round(rand(6, 40)), amp: Math.random() < 0.2 ? rand(0.1, 0.3) : rand(0.35, 1), sharp: rand(0.15, 1) };
+    burst.left -= 1;
+    const white = Math.random() * 2 - 1;
+    lp = lp * 0.72 + white * 0.28;                           // smoothed random walk
+    const v = (lp * 2.4) * (1 - burst.sharp) + white * burst.sharp;
+    return Math.max(-1, Math.min(1, v * burst.amp));
+  };
   const resize = () => {
     const r = canvas.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2);
     w = Math.max(1, Math.round(r.width)); h = Math.max(1, Math.round(r.height));
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const need = Math.ceil(w / STEP) + 3; while (samples.length < need) samples.push(nextSample()); samples.length = need;
   };
-  const ro = new ResizeObserver(() => { resize(); frame(performance.now()); }); ro.observe(canvas);
+  const gainAt = (x) => {                                    // zone gain at pixel x, eased across the zone borders
+    const f = (x / w) * zones - 0.5; const i = Math.floor(f); const t = smooth(Math.min(1, Math.max(0, (f - i) * 1.0)));
+    const a = gain[Math.max(0, Math.min(zones - 1, i))]; const b = gain[Math.max(0, Math.min(zones - 1, i + 1))];
+    return a + (b - a) * t;
+  };
+  const zoneAt = (x) => Math.max(0, Math.min(zones - 1, Math.floor((x / w) * zones)));
 
-  function drawTrace(ch, head, tail) {
-    const it = iterations[ch]; const lane = h / channels; const mid = lane * (ch + 0.5);
-    const step = 2; const n = Math.max(2, Math.floor(w / step));
-    const pts = [];
-    for (let i = 0; i <= n; i++) {
-      const x = i / n;
-      if (x > head) break;
-      pts.push([x * w, mid + (amplitudeAt(it, x) * valueAt(it, x) + it.tilt * (x - 0.5)) * lane * 0.46]);
-    }
-    if (pts.length < 2) return;
-    ctx.strokeStyle = COLORS[ch % COLORS.length]; ctx.lineJoin = ctx.lineCap = 'round';
-    const first = Math.max(0, Math.floor(((head - tail) * n)));
-    const span = pts.length - 1 - first;
-    for (let b = 0; b < BANDS; b++) {                      // oldest band first (thin, faint) -> newest (thick, opaque)
-      const from = first + Math.floor((span * b) / BANDS); const to = first + Math.floor((span * (b + 1)) / BANDS) + 1;
-      if (to <= from + 0) continue;
-      const age = (b + 1) / BANDS;
-      ctx.globalAlpha = 0.12 + 0.88 * age; ctx.lineWidth = 0.6 + 2.0 * age * (0.5 + 0.5 * clamp(sharpnessAt(it, pts[Math.min(to, pts.length - 1)][0] / w)));
-      ctx.beginPath(); ctx.moveTo(pts[from][0], pts[from][1]);
-      for (let i = from + 1; i <= Math.min(to, pts.length - 1); i++) ctx.lineTo(pts[i][0], pts[i][1]);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    const tip = pts[pts.length - 1]; ctx.fillStyle = COLORS[ch % COLORS.length];
-    ctx.beginPath(); ctx.arc(tip[0], tip[1], 2.6, 0, 6.283); ctx.fill();
-  }
-
-  function frame(now) {
+  function frame() {
     ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = '#232b17'; ctx.lineWidth = 1;          // baselines
-    for (let c = 0; c < channels; c++) { const y = (h / channels) * (c + 0.5); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-    const elapsed = now - startedAt; const pass = Math.floor(elapsed / durationMs);
-    if (pass !== lastPass) { iterations = iterations.map((_, i) => newIteration(i)); lastPass = pass; }   // new look every pass
-    const progress = (elapsed % durationMs) / durationMs;
-    const head = clamp(progress * 1.12);                       // slightly beyond 1 so the end of the trace is fully drawn
-    for (let c = 0; c < channels; c++) drawTrace(c, Math.min(1, head - c * 0.04 > 0 ? head - c * 0.04 : 0.001), 0.62);
+    const mid = h * 0.7; const amp = h * 0.3;
+    let seg = []; let segFlat = null;
+    const flush = () => {
+      if (seg.length > 1) {
+        ctx.strokeStyle = segFlat ? alert : trace; ctx.lineWidth = segFlat ? 1.6 : 1.4;
+        ctx.beginPath(); ctx.moveTo(seg[0][0], seg[0][1]); for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i][0], seg[i][1]); ctx.stroke();
+      }
+      seg = [];
+    };
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (let i = 0; i < samples.length; i++) {
+      const x = i * STEP - acc; const g = gainAt(x); const flat = state[zoneAt(x)] === 'bad' || state[zoneAt(x)] === 'skip';
+      if (x < -STEP) continue;
+      if (segFlat !== null && flat !== segFlat) { const keep = seg[seg.length - 1]; flush(); if (keep) seg.push(keep); }
+      segFlat = flat; seg.push([x, mid - samples[i] * g * amp]);
+    }
+    flush();
   }
-  const loop = (now) => { if (stopped) return; if (!document.hidden) frame(now); raf = requestAnimationFrame(loop); };
+  function loop(now) {
+    if (stopped) return; raf = requestAnimationFrame(loop);
+    const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+    if (document.hidden) return;
+    acc += dt * SPEED; while (acc >= STEP) { acc -= STEP; samples.shift(); samples.push(nextSample()); }
+    frame();
+  }
 
+  const ro = new ResizeObserver(() => { resize(); frame(); }); ro.observe(canvas);
   resize();
-  if (reduced()) { startedAt = performance.now() - durationMs * 0.62; frame(performance.now()); }
-  else raf = requestAnimationFrame(loop);
-  return { stop() { stopped = true; if (raf) cancelAnimationFrame(raf); ro.disconnect(); } };
+  if (reduced()) frame(); else raf = requestAnimationFrame(loop);
+  return {
+    setZone(i, s) { if (i < 0 || i >= zones) return; state[i] = s; gain[i] = GAIN[s] ?? GAIN.pending; if (reduced()) frame(); },
+    stop() { stopped = true; if (raf) cancelAnimationFrame(raf); ro.disconnect(); },
+  };
 }

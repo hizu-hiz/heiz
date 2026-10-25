@@ -1,87 +1,100 @@
-/* Animated contour map: solid isolines (marching squares) over a slowly drifting terrain field.
-   Lines only, no fills, no gradients, no heat map. One shared animation loop drives every canvas, and canvases
-   that are off-screen, or a hidden tab, cost nothing. Reduced-motion users get a single still frame. */
+/* Animated contour map: solid isolines (marching squares, interpolated) over a slowly evolving terrain field that
+   fills the whole canvas. Each mount rolls its own terrain (noise seed, feature size, warp strength, hills and basins),
+   so no two screens look alike, and the field is domain-warped so the lines wander like real topography instead of
+   forming even blobs. Lines only: no fills, no gradients. One shared loop drives every canvas; off-screen canvases and
+   hidden tabs cost nothing. Reduced-motion users get one still frame. */
 const THEMES = {
-  dark: { minor: '#222a15', index: '#38441f', accent: '#5b6a22' },
-  light: { minor: '#d3d8bf', index: '#bcc59c', accent: '#9aa86a' },
+  dark: { minor: 'rgba(120, 120, 220, .13)', index: 'rgba(130, 130, 235, .24)', accent: 'rgba(160, 160, 255, .36)' },
+  light: { minor: 'rgba(47, 47, 143, .10)', index: 'rgba(47, 47, 143, .18)', accent: 'rgba(47, 47, 143, .28)' },
 };
 const FPS = 20;
+const MAX_VERTICES = 9000;               // keeps big screens affordable by enlarging the cell instead of dropping detail elsewhere
 const instances = new Set();
 let raf = null; let last = 0;
 const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rand = (a, b) => a + Math.random() * (b - a);
 
-// Corner order a(top-left) b(top-right) c(bottom-right) d(bottom-left); edges T=a-b R=b-c B=d-c L=a-d.
-const CASES = { 1: ['L', 'B'], 2: ['B', 'R'], 3: ['L', 'R'], 4: ['T', 'R'], 6: ['T', 'B'], 7: ['L', 'T'], 8: ['L', 'T'],
-  9: ['T', 'B'], 11: ['T', 'R'], 12: ['L', 'R'], 13: ['B', 'R'], 14: ['L', 'B'] };
-
-function field(x, y, t, blobs) {
-  let v = 0;
-  for (const b of blobs) {
-    const cx = b.x + Math.cos(t * b.sx + b.p) * b.rx; const cy = b.y + Math.sin(t * b.sy + b.p * 1.7) * b.ry;
-    const dx = x - cx; const dy = y - cy;
-    v += b.a * Math.exp(-(dx * dx + dy * dy) / (2 * b.s * b.s));
-  }
-  return v + 0.05 * Math.sin(x * 3.1 + t * 0.13) * Math.cos(y * 2.3 - t * 0.1);
+/* 3D value noise with a per-instance permutation table (so every mount has a different landscape). */
+function makeNoise() {
+  const p = new Uint8Array(512); const base = Array.from({ length: 256 }, (_, i) => i);
+  for (let i = 255; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [base[i], base[j]] = [base[j], base[i]]; }
+  for (let i = 0; i < 512; i++) p[i] = base[i & 255];
+  const v = (x, y, z) => p[p[p[x & 255] + (y & 255)] + (z & 255)] / 255;
+  const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  return (x, y, z) => {
+    const xi = Math.floor(x); const yi = Math.floor(y); const zi = Math.floor(z);
+    const u = fade(x - xi); const w = fade(y - yi); const s = fade(z - zi);
+    const l = (a, b, t) => a + (b - a) * t;
+    return l(l(l(v(xi, yi, zi), v(xi + 1, yi, zi), u), l(v(xi, yi + 1, zi), v(xi + 1, yi + 1, zi), u), w),
+      l(l(v(xi, yi, zi + 1), v(xi + 1, yi, zi + 1), u), l(v(xi, yi + 1, zi + 1), v(xi + 1, yi + 1, zi + 1), u), w), s);
+  };
 }
 
+// Corner bits: a(top-left)=8 b(top-right)=4 c(bottom-right)=2 d(bottom-left)=1. Edges: T=a-b R=b-c B=d-c L=a-d.
+const CASES = { 1: ['L', 'B'], 2: ['B', 'R'], 3: ['L', 'R'], 4: ['T', 'R'], 5: ['T', 'L', 'B', 'R'], 6: ['T', 'B'], 7: ['L', 'T'],
+  8: ['L', 'T'], 9: ['T', 'B'], 10: ['L', 'B', 'T', 'R'], 11: ['T', 'R'], 12: ['L', 'R'], 13: ['B', 'R'], 14: ['L', 'B'] };
+
 class Contour {
-  constructor(canvas, { theme = 'dark', cell = 24, levels = 9, speed = 1 } = {}) {
-    Object.assign(this, { canvas, ctx: canvas.getContext('2d'), colors: THEMES[theme] || THEMES.dark, cell, levels, speed });
-    this.t = Math.random() * 100; this.visible = true; this.w = 0; this.h = 0;
-    this.blobs = Array.from({ length: 6 }, () => ({
-      x: Math.random(), y: Math.random(), rx: 0.15 + Math.random() * 0.22, ry: 0.12 + Math.random() * 0.2,
-      sx: 0.05 + Math.random() * 0.09, sy: 0.04 + Math.random() * 0.08, p: Math.random() * 6.28,
-      s: 0.13 + Math.random() * 0.12, a: 0.55 + Math.random() * 0.45 }));
-    this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(canvas);
-    this.io = new IntersectionObserver(([entry]) => { this.visible = entry.isIntersecting; }, { rootMargin: '80px' });
-    this.io.observe(canvas);
-    this.resize();
+  constructor(canvas, { theme = 'dark', cell = 16, speed = 1 } = {}) {
+    Object.assign(this, { canvas, ctx: canvas.getContext('2d'), colors: THEMES[theme] || THEMES.dark, cell, speed });
+    this.noise = makeNoise();
+    this.t = Math.random() * 200; this.visible = true; this.w = 0; this.h = 0;
+    this.levels = Math.round(rand(15, 20));              // how many isolines (variety between mounts)
+    this.feature = rand(240, 480);                       // px size of the main terrain features
+    this.warp = rand(0.7, 1.7);                          // how strongly the lines wander
+    this.hills = Array.from({ length: Math.round(rand(3, 6)) }, () => ({
+      x: Math.random(), y: Math.random(), r: rand(0.12, 0.3), a: rand(0.35, 0.8) * (Math.random() < 0.3 ? -1 : 1),
+      sx: rand(0.05, 0.14), sy: rand(0.05, 0.14), ph: rand(0, 6.28), orbit: rand(0.02, 0.07),
+    }));
+    this.ro = new ResizeObserver(() => { this.resize(); this.draw(); }); this.ro.observe(canvas);
+    this.io = new IntersectionObserver((e) => { this.visible = e[e.length - 1].isIntersecting; }); this.io.observe(canvas);
+    this.resize(); this.draw();
   }
 
   resize() {
-    const r = this.canvas.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const r = this.canvas.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.w = Math.max(1, Math.round(r.width)); this.h = Math.max(1, Math.round(r.height));
     this.canvas.width = Math.round(this.w * dpr); this.canvas.height = Math.round(this.h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.cols = Math.ceil(this.w / this.cell) + 1; this.rows = Math.ceil(this.h / this.cell) + 1;
-    this.grid = new Float32Array((this.cols + 1) * (this.rows + 1));
-    this.draw();
+    this.step = Math.max(this.cell, Math.sqrt((this.w * this.h) / MAX_VERTICES));
+    this.cols = Math.ceil(this.w / this.step) + 1; this.rows = Math.ceil(this.h / this.step) + 1;
+    this.grid = new Float32Array(this.cols * this.rows);
+  }
+
+  value(px, py, t) {
+    const n = this.noise; const k = 1 / this.feature; const x = px * k; const y = py * k; const z = t * 0.05;
+    const fbm = (a, b, c) => (n(a, b, c) * 0.58 + n(a * 2.03, b * 2.03, c * 1.3) * 0.29 + n(a * 4.1, b * 4.1, c * 1.7) * 0.13);
+    const wx = fbm(x + 5.2, y + 1.3, z * 0.7) - 0.5; const wy = fbm(x + 1.7, y + 9.2, z * 0.7) - 0.5;
+    let v = (fbm(x + this.warp * wx * 2, y + this.warp * wy * 2, z) - 0.5) * 2.1;
+    for (const h of this.hills) {                          // hills and basins give the closed rings real maps have
+      const cx = (h.x + Math.cos(t * h.sx + h.ph) * h.orbit) * this.w; const cy = (h.y + Math.sin(t * h.sy + h.ph * 1.7) * h.orbit) * this.h;
+      const rr = h.r * Math.max(this.w, this.h); const dx = px - cx; const dy = py - cy;
+      v += h.a * Math.exp(-(dx * dx + dy * dy) / (2 * rr * rr));
+    }
+    return v;
   }
 
   draw() {
-    const { ctx, w, h, cell, cols, rows, grid } = this;
+    const { ctx, cols, rows, step, grid, w, h } = this;
     ctx.clearRect(0, 0, w, h);
-    const stride = cols + 1; const aspect = w / h;
-    for (let j = 0; j <= rows; j++) for (let i = 0; i <= cols; i++) {
-      grid[j * stride + i] = field((i * cell) / w * aspect, (j * cell) / h, this.t, this.blobs);
-    }
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    for (let k = 1; k <= this.levels; k++) {
-      const level = k * (1.15 / (this.levels + 1));
-      const major = k % 4 === 0;
-      ctx.strokeStyle = major ? this.colors.accent : k % 2 === 0 ? this.colors.index : this.colors.minor;
-      ctx.lineWidth = major ? 1.6 : 1;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) grid[j * cols + i] = this.value(i * step, j * step, this.t);
+    const lo = -0.85; const hi = 1.05;
+    ctx.lineJoin = ctx.lineCap = 'round';
+    for (let k = 0; k < this.levels; k++) {
+      const level = lo + ((hi - lo) * (k + 0.5)) / this.levels;
+      ctx.strokeStyle = k % 8 === 0 ? this.colors.accent : k % 4 === 0 ? this.colors.index : this.colors.minor;
+      ctx.lineWidth = k % 8 === 0 ? 1.7 : k % 4 === 0 ? 1.3 : 0.9;
       ctx.beginPath();
-      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-        const a = grid[j * stride + i]; const b = grid[j * stride + i + 1];
-        const c = grid[(j + 1) * stride + i + 1]; const d = grid[(j + 1) * stride + i];
-        const code = (a > level ? 8 : 0) | (b > level ? 4 : 0) | (c > level ? 2 : 0) | (d > level ? 1 : 0);
-        if (code === 0 || code === 15) continue;
-        const x0 = i * cell; const y0 = j * cell;
-        const pt = (edge) => {
-          if (edge === 'T') return [x0 + ((level - a) / (b - a)) * cell, y0];
-          if (edge === 'R') return [x0 + cell, y0 + ((level - b) / (c - b)) * cell];
-          if (edge === 'B') return [x0 + ((level - d) / (c - d)) * cell, y0 + cell];
-          return [x0, y0 + ((level - a) / (d - a)) * cell];
-        };
-        let segs = CASES[code];
-        if (code === 5 || code === 10) {
-          const inside = (a + b + c + d) / 4 > level;
-          segs = code === 5 ? (inside ? ['L', 'T', 'B', 'R'] : ['T', 'R', 'L', 'B']) : (inside ? ['T', 'R', 'L', 'B'] : ['L', 'T', 'B', 'R']);
-        }
-        for (let s = 0; s < segs.length; s += 2) {
-          const p = pt(segs[s]); const q = pt(segs[s + 1]);
-          ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
+      for (let j = 0; j < rows - 1; j++) {
+        for (let i = 0; i < cols - 1; i++) {
+          const a = grid[j * cols + i]; const b = grid[j * cols + i + 1]; const c = grid[(j + 1) * cols + i + 1]; const d = grid[(j + 1) * cols + i];
+          const idx = (a > level ? 8 : 0) | (b > level ? 4 : 0) | (c > level ? 2 : 0) | (d > level ? 1 : 0);
+          const segs = CASES[idx]; if (!segs) continue;
+          const x0 = i * step; const y0 = j * step;
+          const pt = (e) => (e === 'T' ? [x0 + step * ((level - a) / (b - a)), y0]
+            : e === 'B' ? [x0 + step * ((level - d) / (c - d)), y0 + step]
+              : e === 'L' ? [x0, y0 + step * ((level - a) / (d - a))] : [x0 + step, y0 + step * ((level - b) / (c - b))]);
+          for (let s = 0; s < segs.length; s += 2) { const p = pt(segs[s]); const q = pt(segs[s + 1]); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); }
         }
       }
       ctx.stroke();

@@ -4,7 +4,8 @@ import { startSeismicTrails } from './seismic-trails.js';
 
 export function createSplash(root, { minVisibleMs = 1400 } = {}) {
   const shownAt = Date.now();
-  const trails = startSeismicTrails($('.splash-trails', root));
+  const ZONES = ['service', 'database', 'events'];
+  const trails = startSeismicTrails($('.splash-trails', root), { zones: ZONES.length });
   const stepNode = $('[data-splash-step]', root); const detailNode = $('[data-splash-detail]', root);
   const actions = $('.splash-actions', root);
   const skipBtn = $('[data-splash-skip]', root); const retryBtn = $('[data-splash-retry]', root);
@@ -15,8 +16,11 @@ export function createSplash(root, { minVisibleMs = 1400 } = {}) {
   retryBtn.addEventListener('click', signal('retry'));
 
   return {
-    step(text, detail = '') { stepNode.textContent = text; detailNode.textContent = detail; },
-    check(name, state) { const li = $(`[data-check="${name}"]`, root); if (li) li.dataset.state = state; },
+    step(text, detail = '') { stepNode.textContent = /^(ready|the service|no database)/i.test(text) ? text : `${text}...`; detailNode.textContent = detail; },
+    check(name, state) {
+      const li = $(`[data-check="${name}"]`, root); if (li) li.dataset.state = state;
+      trails.setZone(ZONES.indexOf(name), state);
+    },
     offerChoices({ canUseSaved }) {
       actions.hidden = false;
       skipBtn.textContent = canUseSaved ? 'Show saved data' : 'Continue anyway';

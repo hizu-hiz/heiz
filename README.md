@@ -49,7 +49,7 @@ imported events. Defaults are in `app/config.py`. The dashboard shows database s
 ## Credits
 - Earthquake data: **BMKG**.
 - Libraries: FastAPI, Pydantic, SQLAlchemy, psycopg, httpx, pytest. [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2-Clause). Fonts: Bricolage Grotesque and Atkinson Hyperlegible (SIL OFL 1.1). Licenses are in `web/assets/`.
-- Map tiles load at runtime from CARTO, OpenStreetMap contributors, Esri and OpenTopoMap, with attribution on the map. Check each provider's terms before heavy use.
+- Map tiles load at runtime from Esri, OpenTopoMap and OpenStreetMap contributors, with attribution on the map; a bundled Natural Earth outline is the offline fallback. Check each provider's terms before heavy use.
 - Deployment approach: Vercel's FastAPI guide, https://vercel.com/docs/frameworks/backend/fastapi .
 
 MIT, see `LICENSE`. Third-party material keeps its own licenses (`THIRD_PARTY_NOTICES.md`). The Heiz name and logo files are not covered by MIT.

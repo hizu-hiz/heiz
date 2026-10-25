@@ -5,7 +5,7 @@ body.ops { background: var(--basalt); color: var(--on-dark); --focus: var(--acce
 
 /* login */
 .login { position: relative; isolation: isolate; min-height: 100svh; display: grid; place-items: center; padding: 1.2rem; overflow: hidden; }
-.login-card { width: min(460px, 100%); display: grid; gap: 1.1rem; padding: 1.8rem 1.6rem; background: rgba(17,20,12,.9);
+.login-card { width: min(460px, 100%); display: grid; gap: 1.1rem; padding: 1.8rem 1.6rem; background: rgba(16,16,28,.9);
   border: 1px solid var(--line); border-radius: 6px; --tex-color: rgba(250,250,100,.05); }
 .login-card .banner-logo { width: min(240px, 80%); height: auto; display: block; }
 .login-card h1 { font-size: 1.7rem; }

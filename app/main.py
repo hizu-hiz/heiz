@@ -12,7 +12,7 @@ DESCRIPTION = (
     "earthquakes, and is NOT an early-warning system. For official information consult BMKG."
 )
 
-app = FastAPI(title="Heiz API", version="1.0.0", description=DESCRIPTION)
+app = FastAPI(title="Heiz API", version="2.0.0", description=DESCRIPTION)
 register_error_handlers(app)
 
 

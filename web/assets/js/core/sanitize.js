@@ -2,7 +2,7 @@
    before it is used. API data is a separate matter: it is never parsed as HTML (see dom.js, textContent only). */
 
 // C0/C1 control characters (tab and newline excluded), zero-width and bidirectional override characters.
-const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿]/g;
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
 
 /** Plain text: normalised, control characters removed, whitespace collapsed, length capped (by characters). */
 export function cleanText(value, { max = 200, multiline = false } = {}) {

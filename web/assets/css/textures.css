@@ -1,12 +1,23 @@
-/* Decorative texture: hexagon or diamond lattice drawn as a mask so the colour is a plain CSS value.
-   Solid lines only. Usage: <section class="tex tex-hex"> ... </section> (content stays above the texture). */
-.tex { position: relative; isolation: isolate; --tex-color: rgba(250, 250, 100, .09); }
+/* Decorative textures drawn as CSS masks, so colours are plain CSS values and nothing is a raster.
+   .tex-hex       hexagon lattice, one flat colour (--tex-color).
+   .tex-diamond   the Heiz diamond tile, one flat colour, repeated at a small size.
+   .tex-harlequin the same tile at full size with a vertical colour ramp: cream at the top fading through lavender and
+                  indigo into the page background. The tile is the MASK (it decides the shape) and a linear-gradient is the FILL,
+                  so the fade is an alpha ramp on the diamonds only; the gaps between diamonds stay background.
+   Usage: <section class="tex tex-harlequin"> ... </section>  (content stays above the texture). */
+.tex { position: relative; isolation: isolate; --tex-color: rgba(250, 250, 200, .09); }
 .tex::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--tex-color);
   -webkit-mask-repeat: repeat; mask-repeat: repeat; }
 .tex-hex::before { -webkit-mask-image: url("../img/tex-hex.svg"); mask-image: url("../img/tex-hex.svg");
   -webkit-mask-size: 31.18px 54px; mask-size: 31.18px 54px; }
 .tex-diamond::before { -webkit-mask-image: url("../img/tex-diamond.svg"); mask-image: url("../img/tex-diamond.svg");
-  -webkit-mask-size: 36px 36px; mask-size: 36px 36px; }
-.tex.on-light { --tex-color: rgba(58, 77, 11, .10); }
+  -webkit-mask-size: 24.7px 40px; mask-size: 24.7px 40px; }
+.tex-harlequin { --harlequin-w: 49px; --harlequin-reach: 62%; }
+.tex-harlequin::before { bottom: auto; height: var(--harlequin-reach);
+  background: linear-gradient(to bottom, #f6f6c8 0%, #d6d6dc 14%, #9a9ad8 32%, #5a5ab4 50%, #2c2c78 68%, rgba(26, 26, 74, .35) 86%, rgba(16, 16, 28, 0) 100%);
+  -webkit-mask-image: url("../img/tex-diamond.svg"); mask-image: url("../img/tex-diamond.svg");
+  -webkit-mask-size: var(--harlequin-w) calc(var(--harlequin-w) * 1.6179); mask-size: var(--harlequin-w) calc(var(--harlequin-w) * 1.6179);
+  -webkit-mask-position: center top; mask-position: center top; }
+.tex.on-light { --tex-color: rgba(47, 47, 143, .10); }
 /* Contour canvas: positioned by its container, never intercepts clicks. */
 canvas[data-contour] { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; display: block; }

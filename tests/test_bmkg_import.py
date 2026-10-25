@@ -5,7 +5,7 @@ from app.models import EarthquakeEvent, EventUpdate, SyncLog
 from app.services import bmkg
 from tests.conftest import ADMIN, KEY
 
-# Shapes copied from real BMKG responses.
+# Shapes copied from real BMKG responses observed on 2026-10-16 (see docs/BMKG-FEED-NOTES.md).
 M5 = {"Tanggal": "12 Okt 2026", "Jam": "04:34:53 WIB", "DateTime": "2026-10-11T21:34:53+00:00",
       "Coordinates": "0.64,121.75", "Lintang": "0.64 LU", "Bujur": "121.75 BT", "Magnitude": "5.7",
       "Kedalaman": "76 km", "Wilayah": "29 km BaratLaut POHUWATO-GORONTALO",
@@ -28,8 +28,8 @@ def sync(Session, payload, feed="gempaterkini"):
 def test_normalize_real_record():
     ev = bmkg.normalize_record(M5)
     assert float(ev.latitude) == 0.64 and float(ev.longitude) == 121.75
-    assert float(ev.magnitude) == 5.7 and float(ev.depth_km) == 76 # type: ignore
-    assert ev.tsunami_potential is False and ev.occurred_at.utcoffset().total_seconds() == 0 # type: ignore
+    assert float(ev.magnitude) == 5.7 and float(ev.depth_km) == 76
+    assert ev.tsunami_potential is False and ev.occurred_at.utcoffset().total_seconds() == 0
     assert ev.key == "derived:2026-10-11T21:34:53Z|0.64,121.75"
 
 
@@ -144,7 +144,7 @@ def test_update_tracked_and_no_null_overwrite(Session):
 def test_partial_when_some_records_invalid(Session):
     log = sync(Session, [M5, {**FELT, "Wilayah": ""}])
     assert log.status == "partial" and log.records_created == 1 and log.records_skipped == 1
-    assert "invalid" in log.error_summary # type: ignore
+    assert "invalid" in log.error_summary
 
 
 def test_all_invalid_is_failed(Session):
@@ -172,7 +172,7 @@ def test_unexpected_exception_is_sanitized(Session):
     def boom(url, settings):
         raise RuntimeError("login failed, DB_PASSWORD=hunter2-example")
     log = sync(Session, boom)
-    assert log.status == "failed" and "hunter2" not in log.error_summary # type: ignore
+    assert log.status == "failed" and "hunter2" not in log.error_summary
 
 
 def test_fetch_feed_http_handling(monkeypatch):
@@ -198,7 +198,7 @@ def test_fetch_feed_http_handling(monkeypatch):
     assert bmkg.fetch_feed("https://x", s) == [1]
 
 
-# /api/sync endpoint: protection, validation, throttling
+# ---- /api/sync endpoint: protection, validation, throttling
 def test_sync_endpoint_protection_and_validation(client):
     assert client.post("/api/sync").status_code == 401
     assert client.post("/api/sync", headers=KEY).status_code == 401     # writer key is NOT enough

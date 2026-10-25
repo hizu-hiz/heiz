@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Heiz | Indonesian earthquakes from BMKG</title>
   <meta name="description" content="Heiz stores earthquake reports published by BMKG and serves them as a JSON API. Educational project, not an official or early-warning service.">
-  <meta name="theme-color" content="#11140c">
+  <meta name="theme-color" content="#10101c">
   <link rel="icon" type="image/svg+xml" href="/assets/img/heiz-logo-accent.svg">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/assets/css/tokens.css">
@@ -18,16 +18,20 @@
   <noscript><style>#splash { display: none; } html.splashing .page { visibility: visible; }</style></noscript>
 </head>
 <body>
-<div class="splash tex tex-hex" id="splash" role="status" aria-live="polite" aria-label="Loading Heiz">
+<div class="splash tex tex-harlequin" id="splash" role="status" aria-live="polite" aria-label="Loading Heiz">
   <canvas data-contour data-contour-theme="dark" aria-hidden="true"></canvas>
-  <div class="splash-card tex tex-diamond">
-    <img class="splash-logo" src="/assets/img/heiz-logo-banner.svg" alt="Heiz" width="260" height="84">
-    <canvas class="splash-trails" aria-hidden="true"></canvas>
+  <div class="splash-card">
+    <img class="splash-logo" src="/assets/img/heiz-logo-banner.svg" alt="Heiz" width="168" height="54">
+    <div class="splash-trace">
+      <canvas class="splash-trails" aria-hidden="true"></canvas>
+      <ol class="splash-pins" aria-label="Start-up checks">
+        <li class="splash-pin" data-check="service" data-state="pending" style="left:16%">Service</li>
+        <li class="splash-pin" data-check="database" data-state="pending" style="left:50%">Database</li>
+        <li class="splash-pin" data-check="events" data-state="pending" style="left:84%">Earthquakes</li>
+      </ol>
+    </div>
     <p class="splash-step" data-splash-step>Starting</p>
     <p class="splash-detail" data-splash-detail></p>
-    <ol class="splash-checks" aria-label="Start-up checks">
-      <li data-check="service">Service</li><li data-check="database">Database</li><li data-check="events">Earthquakes</li>
-    </ol>
     <div class="splash-actions" hidden>
       <button class="btn primary" type="button" data-splash-skip>Continue anyway</button>
       <button class="btn" type="button" data-splash-retry>Check again now</button>

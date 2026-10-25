@@ -4,6 +4,6 @@ export const DEPTH_BANDS = [
   { max: 150, key: 'deep', cls: 'd-deep', color: '#d9568f', label: '70 to 150 km' },
   { max: Infinity, key: 'vdeep', cls: 'd-vdeep', color: '#8f7bf0', label: 'Deep, over 150 km' },
 ];
-export const UNKNOWN_DEPTH = { key: 'unknown', cls: 'd-unknown', color: '#aab491', label: 'Depth not reported' };
+export const UNKNOWN_DEPTH = { key: 'unknown', cls: 'd-unknown', color: '#a6a8cf', label: 'Depth not reported' };
 export const band = (depth) => (depth == null ? UNKNOWN_DEPTH : DEPTH_BANDS.find((b) => Number(depth) < b.max));
 export const depthKey = (e) => band(e.depth_km).key;

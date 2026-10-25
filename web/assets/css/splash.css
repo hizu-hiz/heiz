@@ -1,20 +1,27 @@
-/* Splash: shown while the page confirms the service and database are reachable. */
+/* Splash: shown while the page confirms the service and database are reachable. Layout follows the design reference:
+   harlequin fade at the top, a centred card with a thin yellow rounded border, the flat banner logo, a seismic trace with
+   three pinned status labels, and one bold line of text. */
 .splash { position: fixed; inset: 0; z-index: 4000; display: grid; place-items: center; padding: 1rem;
-  background: var(--basalt); color: var(--on-dark); --focus: var(--accent); transition: opacity .45s ease, visibility .45s;
-  animation: splash-away .01s 9s forwards; }
+  background: var(--navy); color: var(--on-dark); --focus: var(--accent); font-family: var(--splash);
+  transition: opacity .45s ease, visibility .45s; animation: splash-away .01s 9s forwards; }
+.splash canvas[data-contour] { z-index: -2; }
 .splash.leaving { opacity: 0; visibility: hidden; }
 @keyframes splash-away { to { opacity: 0; visibility: hidden; } }
-.splash-card { width: min(560px, 100%); display: grid; gap: 1rem; padding: 2rem 1.6rem 1.6rem; border: 1px solid var(--line);
-  background: rgba(17, 20, 12, .86); border-radius: 6px; --tex-color: rgba(250, 250, 100, .06); }
-.splash-logo { width: min(260px, 70%); height: auto; display: block; }
-.splash-trails { width: 100%; height: 120px; display: block; background: #0c0f08; border: 1px solid var(--line); border-radius: var(--radius); }
-.splash-step { margin: 0; font: 700 1.15rem var(--display); }
-.splash-detail { margin: 0; color: var(--on-dark-muted); min-height: 1.5em; }
-.splash-checks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
-.splash-checks li { font-size: .88rem; padding: .4rem .5rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--on-dark-muted); }
-.splash-checks li::before { content: "\2026  "; }
-.splash-checks li[data-state="ok"] { color: var(--ok); border-color: var(--ok); } .splash-checks li[data-state="ok"]::before { content: "\2713  "; }
-.splash-checks li[data-state="bad"] { color: var(--bad); border-color: var(--bad); } .splash-checks li[data-state="bad"]::before { content: "\2715  "; }
-.splash-checks li[data-state="skip"]::before { content: "\2013  "; }
-.splash-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
-@media (max-width: 480px) { .splash-checks { grid-template-columns: 1fr; } }
+.splash-card { width: min(490px, 100%); display: grid; justify-items: center; gap: .9rem; padding: 1.7rem 1.4rem 1.5rem;
+  border: 1px solid rgba(250, 250, 100, .55); border-radius: 14px; background: rgba(16, 16, 28, .5); text-align: center; }
+.splash-logo { width: min(168px, 52%); height: auto; display: block; }
+.splash-trace { position: relative; width: min(330px, 100%); height: 74px; margin-top: .4rem; }
+.splash-trails { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.splash-pins { list-style: none; margin: 0; padding: 0; position: absolute; inset: 0; pointer-events: none; }
+.splash-pin { position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; font-size: .78rem; font-weight: 400;
+  color: var(--ok); line-height: 1; white-space: nowrap; transition: color .3s; }
+.splash-pin::after { content: ""; width: 1px; height: 18px; margin-top: 4px; background: currentColor; }
+.splash-pin::before { content: ""; order: 1; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-top: -1px; box-shadow: 0 0 0 2px rgba(16, 16, 28, .9); }
+.splash-pin[data-state="pending"] { color: var(--on-dark-muted); }
+.splash-pin[data-state="bad"], .splash-pin[data-state="skip"] { color: var(--pink); }
+.splash-pin[data-state="bad"]::before { content: ""; } .splash-pin[data-state="skip"] { opacity: .8; }
+.splash-step { margin: 0; font: 600 1.28rem/1.25 var(--splash); color: var(--cream); }
+.splash-detail { margin: 0; color: var(--on-dark-muted); font-size: .88rem; max-width: 40ch; }
+.splash-detail:empty { display: none; }
+.splash-actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+@media (max-width: 480px) { .splash-card { padding: 1.4rem 1rem 1.2rem; } .splash-step { font-size: 1.1rem; } }

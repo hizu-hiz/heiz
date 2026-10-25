@@ -30,8 +30,8 @@ export function createBoard({ root, palette, ctx }) {
     const meta = REGISTRY[entry.id];
     const body = el('div', { class: 'w-body' });
     const tools = el('div', { class: 'w-tools' },
-      el('button', { class: 'btn small', type: 'button', 'aria-label': `Move ${meta.title} earlier`, onclick: () => move(entry.id, -1) }, '↑'),
-      el('button', { class: 'btn small', type: 'button', 'aria-label': `Move ${meta.title} later`, onclick: () => move(entry.id, 1) }, '↓'),
+      el('button', { class: 'btn small', type: 'button', 'aria-label': `Move ${meta.title} earlier`, onclick: () => move(entry.id, -1) }, '\u2191'),
+      el('button', { class: 'btn small', type: 'button', 'aria-label': `Move ${meta.title} later`, onclick: () => move(entry.id, 1) }, '\u2193'),
       el('button', { class: 'btn small', type: 'button', 'aria-label': `Change size of ${meta.title}`, onclick: () => resize(entry.id) }, sizeLabel[entry.size]),
       el('button', { class: 'btn small danger', type: 'button', 'aria-label': `Remove ${meta.title}`, onclick: () => remove(entry.id) }, 'Remove'));
     const node = el('section', { class: 'w', 'data-size': entry.size, 'data-widget': entry.id, 'aria-label': meta.title },

@@ -10,7 +10,7 @@ from tests.conftest import ADMIN, KEY
 VALID = {"location_description": "Manual place", "magnitude": 3.0}
 
 
-# auth tiers
+# ---- auth tiers
 def test_admin_endpoints_need_bearer(client):
     assert client.get("/api/admin/whoami").status_code == 401
     assert client.get("/api/admin/whoami", headers=KEY).status_code == 401   # writer key rejected
@@ -44,7 +44,7 @@ def test_short_secrets_are_rejected(client, monkeypatch):
     assert client.post("/api/earthquakes", json=VALID, headers={"X-API-Key": "short"}).status_code == 503
 
 
-# DB down => structured, retryable 503
+# ---- DB down => structured, retryable 503
 def test_database_down_is_retryable_503(client):
     from app.database import get_db
     from app.main import app
@@ -80,7 +80,7 @@ def test_status_not_configured(client):
     assert r.status_code == 200 and r.json()["database"] == "not_configured"
 
 
-# overview + prune
+# ---- overview + prune
 def seed(Session):
     old = datetime.now(timezone.utc) - timedelta(days=400)
     with Session() as db:
@@ -155,7 +155,7 @@ def test_prune_respects_batch_cap_and_disabled_rules(client, Session, monkeypatc
         assert db.query(EarthquakeEvent).count() == 2
 
 
-# web pages & headers
+# ---- web pages & headers
 def test_security_headers_and_pages(client):
     r = client.get("/health")
     assert r.headers["x-content-type-options"] == "nosniff"
@@ -183,7 +183,7 @@ def test_new_fields_in_api_output(client, Session):
     assert d["shakemap_url"] == "https://static.bmkg.go.id/20261016102155.mmi.jpg"
 
 
-# test hygiene: a developer's .env must never leak into the test run
+# ---- test hygiene: a developer's .env must never leak into the test run
 def test_settings_ignore_dotenv_during_tests(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text("DATABASE_URL=postgresql://user:pw@db.invalid:5432/x\n")
     monkeypatch.chdir(tmp_path)

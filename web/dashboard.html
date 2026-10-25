@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Heiz control room</title>
+  <link rel="stylesheet" href="/assets/css/heiz.css">
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2312171e'/%3E%3Cpath d='M3 17h6l3-9 4 17 3-12 2 4h8' fill='none' stroke='%23e3be2b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body class="ops">
+<header class="ops-head">
+  <div class="wordmark">
+    <svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><path d="M1 10h6l3-8 4 15 3-10 2 3h14" fill="none" stroke="#e3be2b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Heiz control room
+  </div>
+  <div class="head-right">
+    <span id="who" class="muted"></span>
+    <button class="btn" id="lock" type="button" hidden>Lock</button>
+    <a href="/">Public site</a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="gate" id="gate" aria-labelledby="gate-h">
+    <h1 id="gate-h">Admin access</h1>
+    <p class="muted">Enter the admin token (HEIZ_ADMIN_TOKEN). It stays in this tab only and is sent as a Bearer token. Closing the tab forgets it.</p>
+    <form id="gate-form" autocomplete="off">
+      <label for="token">Admin token</label>
+      <input id="token" name="token" type="password" autocomplete="off" spellcheck="false" required minlength="24">
+      <button class="btn primary" type="submit">Unlock</button>
+    </form>
+    <p class="msg" id="gate-msg" role="alert" hidden></p>
+  </section>
+
+  <div id="panel" hidden>
+    <p class="banner" id="banner" role="status" hidden></p>
+    <div class="ops-grid">
+      <section aria-labelledby="h-service">
+        <h2 id="h-service">Service</h2>
+        <dl class="kv" id="service"></dl>
+      </section>
+      <section aria-labelledby="h-storage">
+        <h2 id="h-storage">Storage</h2>
+        <div id="storage"></div>
+      </section>
+      <section aria-labelledby="h-records">
+        <h2 id="h-records">Records</h2>
+        <dl class="kv" id="records"></dl>
+      </section>
+
+      <section class="wide" aria-labelledby="h-sync">
+        <h2 id="h-sync">Sync from BMKG</h2>
+        <form id="sync-form" class="row">
+          <fieldset><legend class="vh">Feeds</legend>
+            <label><input type="checkbox" name="feed" value="gempaterkini" checked> M 5+ (gempaterkini)</label>
+            <label><input type="checkbox" name="feed" value="gempadirasakan" checked> Felt (gempadirasakan)</label>
+            <label><input type="checkbox" name="feed" value="autogempa" checked> Latest (autogempa)</label>
+          </fieldset>
+          <button class="btn primary" id="sync-go" type="submit">Sync now</button>
+        </form>
+        <p class="muted small">One sync per 60 seconds is allowed. BMKG allows 60 requests per minute per IP.</p>
+        <div id="sync-result" role="status"></div>
+      </section>
+
+      <section class="wide" aria-labelledby="h-clean">
+        <h2 id="h-clean">Clean up old data</h2>
+        <p class="muted" id="retention-text"></p>
+        <div class="row">
+          <button class="btn" id="prune-preview" type="button">Preview cleanup</button>
+          <button class="btn danger" id="prune-run" type="button">Run cleanup</button>
+        </div>
+        <div id="prune-result" role="status"></div>
+      </section>
+
+      <section class="wide" aria-labelledby="h-logs">
+        <h2 id="h-logs">Recent syncs</h2>
+        <div id="logs" class="scroll"></div>
+      </section>
+
+      <section class="wide" aria-labelledby="h-events">
+        <h2 id="h-events">Latest events</h2>
+        <div id="events" class="scroll"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/assets/js/common.js"></script>
+<script src="/assets/js/dashboard.js"></script>
+</body>
+</html>

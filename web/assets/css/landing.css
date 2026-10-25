@@ -2,7 +2,7 @@
 .stage { position: relative; min-height: 100svh; background: var(--basalt); color: var(--on-dark); --focus: var(--accent); }
 #map { position: absolute; inset: 0; background: var(--basalt); }
 .rail { position: absolute; z-index: 1000; top: 0; bottom: 0; left: 0; width: var(--rail-w); max-width: 100%;
-  background: linear-gradient(90deg, rgba(17,20,12,.97) 82%, rgba(17,20,12,0)); padding: 1.6rem 2.2rem 1.2rem 1.6rem;
+  background: linear-gradient(90deg, rgba(16,16,28,.97) 82%, rgba(16,16,28,0)); padding: 1.6rem 2.2rem 1.2rem 1.6rem;
   display: flex; flex-direction: column; gap: 1.1rem; overflow: hidden; pointer-events: none; }
 .rail > * { pointer-events: auto; }
 .rail h1 { font-size: clamp(1.6rem, 2.3vw, 2.1rem); font-weight: 700; }
@@ -36,7 +36,7 @@
 .band.dark .intro { color: var(--on-dark-muted); }
 .try { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; }
 .try ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .8rem; }
-.try li { border: 1.5px solid var(--ink); border-radius: var(--radius); background: #f6f8ee; }
+.try li { border: 1.5px solid var(--ink); border-radius: var(--radius); background: #f4f4fb; }
 .cmd { display: flex; gap: .6rem; align-items: center; justify-content: space-between; padding: .6rem .8rem; }
 .cmd code { font: 500 .85rem/1.4 var(--mono); overflow-wrap: anywhere; }
 .cmd .btn { min-height: 34px; padding: .25rem .7rem; font-size: .85rem; }

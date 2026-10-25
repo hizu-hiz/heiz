@@ -1,7 +1,7 @@
 import os
 
-# Tests must be hermetic: ignore any developer .env / real environment (a real DATABASE_URL in .env made test_status_not_configured connect to the live database).
-# Settings are re-read from this environment only.
+# Tests must be hermetic: ignore any developer .env / real environment (a real DATABASE_URL in .env made
+# test_status_not_configured connect to the live database). Settings are re-read from this environment only.
 from app.config import Settings  # noqa: E402
 
 Settings.model_config["env_file"] = None

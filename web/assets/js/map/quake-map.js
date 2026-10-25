@@ -1,7 +1,7 @@
 /* QuakeMap: Leaflet map with switchable basemaps and overlays, animated rings for fresh events and a time-lapse
    replay. Reusable: the landing page and the dashboard's live-map widget both construct it. Needs window.L (vendored). */
 import { el } from '../core/dom.js';
-import { makeBasemaps } from './basemaps.js';
+import { DEFAULT_BASEMAP, OFFLINE_NAME, makeBasemaps } from './basemaps.js';
 import { band } from './depth.js';
 import { popupContent } from './popup.js';
 
@@ -13,10 +13,10 @@ const mag = (e) => (e.magnitude == null ? null : Number(e.magnitude));
 const colorOf = (e) => band(e.depth_km).color;
 
 export class QuakeMap {
-  constructor(container, { onNew, padLeft = 0, collapsedControls = window.innerWidth < 860 } = {}) {
+  constructor(container, { onNew, onTilesFailed, padLeft = 0, collapsedControls = window.innerWidth < 860 } = {}) {
     const L = window.L;
     if (!L) throw new Error('Leaflet is not loaded');
-    this.L = L; this.onNew = onNew; this.known = new Set(); this.markers = new Map();
+    this.L = L; this.onNew = onNew; this.onTilesFailed = onTilesFailed; this.known = new Set(); this.markers = new Map();
     this.map = L.map(container, { zoomControl: false, worldCopyJump: true, minZoom: 3, attributionControl: false }).setView([-2.5, 118], 5);
     L.control.attribution({ prefix: '<a href="https://leafletjs.com">Leaflet</a>', position: 'bottomright' }).addTo(this.map);
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
@@ -25,7 +25,8 @@ export class QuakeMap {
     this.groups = { circles: L.layerGroup(), glow: L.layerGroup(), pulse: L.layerGroup() };
     this.ripples = L.layerGroup().addTo(this.map);
     const base = {}; for (const [name, make] of Object.entries(makeBasemaps(L))) base[name] = make();
-    base['Dark, plain'].addTo(this.map);
+    this.base = base; base[DEFAULT_BASEMAP].addTo(this.map); this._watchTiles(base[DEFAULT_BASEMAP]);
+    this.map.on('baselayerchange', (e) => { if (e.layer.on && e.layer.getTileUrl) this._watchTiles(e.layer); });
     Object.values(this.groups).forEach((g) => g.addTo(this.map));
     L.control.layers(base, { 'Magnitude circles': this.groups.circles, 'Energy glow': this.groups.glow, 'Pulse rings (last 24 h)': this.groups.pulse },
       { position: 'topright', collapsed: collapsedControls }).addTo(this.map);
@@ -33,6 +34,21 @@ export class QuakeMap {
   }
 
   invalidate() { this.map.invalidateSize(); }
+
+  /** If a tile layer loads nothing and errors repeatedly (blocked or down), fall back to the bundled outline map. */
+  _watchTiles(layer) {
+    let ok = 0; let bad = 0; let done = false;
+    layer.on('tileload', () => { ok += 1; });
+    layer.on('tileerror', () => {
+      bad += 1;
+      if (done || ok > 0 || bad < 6) return;
+      done = true;
+      const offline = this.base[OFFLINE_NAME];
+      if (this.map.hasLayer(layer)) this.map.removeLayer(layer);
+      if (!this.map.hasLayer(offline)) offline.addTo(this.map);
+      if (this.onTilesFailed) this.onTilesFailed();
+    });
+  }
 
   _clear() { Object.values(this.groups).forEach((g) => g.clearLayers()); this.markers.clear(); }
 
@@ -47,7 +63,7 @@ export class QuakeMap {
   _addEvent(e, target, { glow = true, pulse = true } = {}) {
     if (!hasPos(e)) return null;
     const L = this.L; const color = colorOf(e); const ll = [e.latitude, e.longitude];
-    const marker = L.circleMarker(ll, { radius: radiusPx(mag(e)), color: '#0b0f07', weight: 1.2, fillColor: color, fillOpacity: 0.8 })
+    const marker = L.circleMarker(ll, { radius: radiusPx(mag(e)), color: '#0a0a14', weight: 1.2, fillColor: color, fillOpacity: 0.8 })
       .bindPopup(() => popupContent(e), { maxWidth: 300 });
     (target.circles || this.groups.circles).addLayer(marker);
     if (glow) (target.glow || this.groups.glow).addLayer(L.circle(ll, { pane: 'glow', radius: glowMeters(mag(e)), stroke: false, fillColor: color, fillOpacity: 0.28, interactive: false }));
