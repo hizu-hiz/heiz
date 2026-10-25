@@ -28,7 +28,12 @@ log = logging.getLogger("heiz.bmkg")
 USER_AGENT = "Heiz-LearningLabs/1.0 (educational project; data credit: BMKG)"
 _DEPTH_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*km\s*$", re.IGNORECASE)
 TRACKED_FIELDS = ("occurred_at", "location_description", "latitude", "longitude",
-                  "magnitude", "depth_km", "tsunami_potential")
+                  "magnitude", "depth_km", "tsunami_potential", "tsunami_note", "felt_text",
+                  "shakemap_code")
+_SHAKEMAP_RE = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
+_ACTIVE_LEVELS = {"waspada", "siaga", "awas"}
+# Real wording: "Tsunami Tingkat Ancaman AWAS" (level words only count next to the word "tsunami").
+_LEVEL_RE = re.compile(r"\b(?:waspada|siaga|awas)\b")
 
 
 class FeedError(Exception):
@@ -53,6 +58,9 @@ class NormalizedEvent:
     magnitude: Decimal | None
     depth_km: Decimal | None
     tsunami_potential: bool | None
+    tsunami_note: str | None = None
+    felt_text: str | None = None
+    shakemap_code: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -106,16 +114,34 @@ def _dec(text: str, places: str) -> Decimal:
     return d.quantize(Decimal(places))
 
 
-def parse_tsunami(value: Any) -> bool | None:
-    """'Tidak berpotensi tsunami' -> False; 'Berpotensi tsunami' -> True; absent/unknown -> None."""
-    if not isinstance(value, str):
-        return None
-    s = value.lower()
-    if "tsunami" not in s:
-        return None
-    if "tidak" in s:
-        return False
-    return True if "berpotensi" in s else None
+def classify_potensi(value: Any) -> tuple[bool | None, str | None]:
+    """Return (tsunami_potential, verbatim_text) from BMKG's free-text `Potensi` field.
+
+    Tri-state, never invented:
+      False -> BMKG explicitly says there is NO tsunami potential ("Tidak berpotensi tsunami")
+      True  -> BMKG indicates tsunami potential / an active warning ("Berpotensi tsunami",
+               "Peringatan Dini Tsunami", "Potensi tsunami ...", "Tsunami Tingkat Ancaman
+               WASPADA/SIAGA/AWAS", or a bare level word)
+      None  -> anything else: missing/empty text, a *felt-quake notice* ("Gempa ini dirasakan ..."),
+               a warning-ended notice ("... telah BERAKHIR"), or unrecognized text.
+    Those cases say nothing about tsunami risk, so they must not become False (a false "all clear").
+    The original text is always returned so nothing is lost."""
+    if not isinstance(value, str) or not value.strip():
+        return None, None
+    text = value.strip()[:500]
+    s = " ".join(text.lower().split())
+    if "berakhir" in s or "dicabut" in s or "dirasakan" in s:
+        return None, text
+    if "tidak berpotensi" in s or "tidak ada potensi" in s:
+        return False, text
+    if ("berpotensi tsunami" in s or "potensi tsunami" in s or "peringatan dini tsunami" in s
+            or s in _ACTIVE_LEVELS or ("tsunami" in s and _LEVEL_RE.search(s))):
+        return True, text
+    return None, text
+
+
+def _clean(value: Any, limit: int = 500) -> str | None:
+    return value.strip()[:limit] if isinstance(value, str) and value.strip() else None
 
 
 def normalize_record(item: Any) -> NormalizedEvent:
@@ -156,12 +182,17 @@ def normalize_record(item: Any) -> NormalizedEvent:
             raise RecordError("unrecognized Kedalaman format")
         depth = _dec(m.group(1), "0.01")
 
+    tsunami, tsunami_note = classify_potensi(item.get("Potensi"))
+    shake = _clean(item.get("Shakemap"), 1000)  # validated below, never truncated into validity
+
     return NormalizedEvent(
         key=dedupe_key(occurred, parts[0], parts[1]),
         occurred_at=occurred,
         location_description=place.strip()[:500],
         latitude=lat, longitude=lon, magnitude=magnitude, depth_km=depth,
-        tsunami_potential=parse_tsunami(item.get("Potensi")),
+        tsunami_potential=tsunami, tsunami_note=tsunami_note,
+        felt_text=_clean(item.get("Dirasakan")),
+        shakemap_code=shake if shake and _SHAKEMAP_RE.match(shake) else None,
         raw=item,
     )
 
@@ -200,6 +231,7 @@ def upsert_event(db: Session, source: DataSource, ev: NormalizedEvent, feed: str
             occurred_at=ev.occurred_at, location_description=ev.location_description,
             latitude=ev.latitude, longitude=ev.longitude, magnitude=ev.magnitude,
             depth_km=ev.depth_km, tsunami_potential=ev.tsunami_potential,
+            tsunami_note=ev.tsunami_note, felt_text=ev.felt_text, shakemap_code=ev.shakemap_code,
             source_url=url, source_attribution="BMKG",
             raw_payload={feed: ev.raw}, imported_at=datetime.now(timezone.utc))
         db.add(row)
@@ -212,6 +244,9 @@ def upsert_event(db: Session, source: DataSource, ev: NormalizedEvent, feed: str
     for name in TRACKED_FIELDS:
         new = getattr(ev, name)
         old = getattr(existing, name)
+        # A feed that only says "felt" must not replace the tsunami wording another feed gave.
+        if name == "tsunami_note" and old is not None and ev.tsunami_potential is None:
+            continue
         if new is not None and not _same(old, new):
             changes[name] = {"old": _jsonable(old), "new": _jsonable(new)}
             setattr(existing, name, new)

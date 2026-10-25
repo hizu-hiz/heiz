@@ -3,7 +3,7 @@ import pytest
 from app.config import get_settings
 from app.models import EarthquakeEvent, EventUpdate, SyncLog
 from app.services import bmkg
-from tests.conftest import KEY
+from tests.conftest import ADMIN, KEY
 
 # Shapes copied from real BMKG responses.
 M5 = {"Tanggal": "12 Okt 2026", "Jam": "04:34:53 WIB", "DateTime": "2026-10-11T21:34:53+00:00",
@@ -33,8 +33,58 @@ def test_normalize_real_record():
     assert ev.key == "derived:2026-10-11T21:34:53Z|0.64,121.75"
 
 
-def test_felt_record_has_null_tsunami():
-    assert bmkg.normalize_record(FELT).tsunami_potential is None
+def test_felt_record_has_null_tsunami_but_keeps_text():
+    ev = bmkg.normalize_record(FELT)
+    assert ev.tsunami_potential is None and ev.tsunami_note is None
+    assert ev.felt_text == "II Kabandungan"
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Tidak berpotensi tsunami", False),
+    ("tidak  BERPOTENSI tsunami", False),
+    ("Berpotensi tsunami", True),
+    ("Potensi tsunami untuk diteruskan pada masyarakat", True),
+    ("Peringatan Dini Tsunami", True),
+    ("Waspada", True), ("Siaga", True), ("Awas", True),
+    # wording documented in BMKG's feed notes (autogempa)
+    ("Tsunami Tingkat Ancaman AWAS", True), ("Tsunami Tingkat Ancaman SIAGA", True),
+    ("Tsunami Tingkat Ancaman WASPADA", True),
+    ("Peringatan Dini Tsunami di Mentawai telah BERAKHIR", None),
+    ("Awas ada anjing", None),     # a level word without "tsunami" in a longer sentence is not a flag
+    # felt notices, ended warnings, blanks and unknown text say nothing => NULL, never a false all-clear
+    ("Gempa ini dirasakan untuk diteruskan pada masyarakat", None),
+    ("Peringatan dini TSUNAMI yang disebabkan oleh gempa telah BERAKHIR", None),
+    ("", None), ("   ", None), (None, None), (42, None), ("Waspadalah selalu", None),
+])
+def test_classify_potensi(text, flag):
+    assert bmkg.classify_potensi(text)[0] is flag
+
+
+def test_classify_potensi_keeps_verbatim_text():
+    assert bmkg.classify_potensi("  Tidak berpotensi tsunami ")[1] == "Tidak berpotensi tsunami"
+    assert bmkg.classify_potensi("")[1] is None
+
+
+def test_shakemap_code_validated():
+    ok = bmkg.normalize_record({**FELT, "Shakemap": "20261016102155.mmi.jpg"})
+    assert ok.shakemap_code == "20261016102155.mmi.jpg"
+    for bad in ("../../etc/passwd", "a b", "x" * 200, "<script>"):
+        assert bmkg.normalize_record({**FELT, "Shakemap": bad}).shakemap_code is None
+
+
+def test_wrapper_shape_from_real_feeds():
+    assert len(bmkg.extract_records({"Infogempa": {"gempa": [M5, FELT]}})) == 2
+
+
+def test_felt_feed_does_not_replace_tsunami_wording(Session):
+    sync(Session, [M5])
+    sync(Session, [{k: v for k, v in M5.items() if k != "Potensi"}], feed="gempadirasakan")
+    sync(Session, [{**M5, "Potensi": "Gempa ini dirasakan untuk diteruskan pada masyarakat"}],
+         feed="autogempa")
+    with Session() as db:
+        ev = db.query(EarthquakeEvent).one()
+        assert ev.tsunami_potential is False and ev.tsunami_note == "Tidak berpotensi tsunami"
+        assert db.query(EventUpdate).filter(EventUpdate.change_type != "created").count() == 0
 
 
 @pytest.mark.parametrize("patch", [{"DateTime": "garbage"}, {"Coordinates": "1"},
@@ -120,9 +170,9 @@ def test_fetch_failures_are_logged_as_failed(Session, exc, expected):
 
 def test_unexpected_exception_is_sanitized(Session):
     def boom(url, settings):
-        raise RuntimeError("postgresql://user:SECRET@host/db")
+        raise RuntimeError("login failed, DB_PASSWORD=hunter2-example")
     log = sync(Session, boom)
-    assert log.status == "failed" and "SECRET" not in log.error_summary # type: ignore
+    assert log.status == "failed" and "hunter2" not in log.error_summary # type: ignore
 
 
 def test_fetch_feed_http_handling(monkeypatch):
@@ -151,18 +201,19 @@ def test_fetch_feed_http_handling(monkeypatch):
 # /api/sync endpoint: protection, validation, throttling
 def test_sync_endpoint_protection_and_validation(client):
     assert client.post("/api/sync").status_code == 401
-    assert client.post("/api/sync", json={"feeds": ["nope"]}, headers=KEY).status_code == 400
+    assert client.post("/api/sync", headers=KEY).status_code == 401     # writer key is NOT enough
+    assert client.post("/api/sync", json={"feeds": ["nope"]}, headers=ADMIN).status_code == 400
 
 
 def test_sync_endpoint_runs_and_throttles(client, monkeypatch):
     original = bmkg.run_feed_sync
 
     def patched(db, source, feed, settings, fetcher=None):
-        return original(db, source, feed, settings, fetcher=lambda u, s: [M5]) # type: ignore
+        return original(db, source, feed, settings, fetcher=lambda u, s: [M5])
     monkeypatch.setattr("app.routers.synchronization.bmkg.run_feed_sync", patched)
-    r = client.post("/api/sync", json={"feeds": ["gempaterkini"]}, headers=KEY)
+    r = client.post("/api/sync", json={"feeds": ["gempaterkini"]}, headers=ADMIN)
     assert r.status_code == 200 and r.json()[0]["status"] == "success"
     assert r.json()[0]["request_url"].endswith("/gempaterkini.json")
-    r2 = client.post("/api/sync", headers=KEY)
+    r2 = client.post("/api/sync", headers=ADMIN)
     assert r2.status_code == 429 and "retry-after" in r2.headers
     assert client.get("/api/sync-logs").json()["pagination"]["total"] == 1

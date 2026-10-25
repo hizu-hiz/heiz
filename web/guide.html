@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heiz API guide</title>
+  <meta name="description" content="How to call the Heiz earthquake API: authentication, errors, and every endpoint with examples.">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/heiz-logo-accent.svg">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/textures.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/landing.css">
+  <link rel="stylesheet" href="/assets/css/guide.css">
+</head>
+<body>
+<div class="guide">
+  <div class="guide-hero tex tex-hex on-dark">
+    <canvas data-contour data-contour-theme="dark" aria-hidden="true"></canvas>
+    <div data-component="site-header" data-current="guide"><a href="/">Heiz</a></div>
+    <h1 style="margin-top:1.6rem">API guide</h1>
+    <p style="margin:0;color:var(--on-dark-muted)">Everything you need to read earthquake reports from Heiz, and to write test records.</p>
+  </div>
+
+  <main>
+    <p>Heiz serves earthquake reports published by BMKG as JSON. Reading is public. Base URL for this server:</p>
+    <p><code class="base" id="base">/</code></p>
+    <noscript><p>This page builds the endpoint list with JavaScript. The same information is in the interactive <a href="/docs">Swagger reference</a>.</p></noscript>
+
+    <h2 id="start">Quick start</h2>
+    <p>Fetch the three most recent events:</p>
+    <pre class="out" id="qs-pre" style="min-height:0"></pre>
+
+    <h2 id="auth">Who can do what</h2>
+    <table class="simple">
+      <thead><tr><th>Access</th><th>How</th><th>Allows</th></tr></thead>
+      <tbody>
+        <tr><td>Public</td><td>No header</td><td>All <code>GET</code> endpoints</td></tr>
+        <tr><td>Writer key</td><td><code>X-API-Key: &lt;key&gt;</code></td><td>Create, replace, update and delete <em>manual</em> earthquake records</td></tr>
+        <tr><td>Admin token</td><td><code>Authorization: Bearer &lt;token&gt;</code></td><td>Everything above, plus triggering a sync, maintenance and the dashboard. Held by the project owner only.</td></tr>
+      </tbody>
+    </table>
+    <p>Records imported from BMKG are read-only for everyone through this API, so manual edits can never change what BMKG reported.</p>
+
+    <h2 id="errors">Errors and retrying</h2>
+    <p>Errors always use one shape:</p>
+    <pre class="out" style="min-height:0">{ "error": { "code": "not_found", "message": "Earthquake event 999 was not found." } }</pre>
+    <p>Invalid input returns <code>400</code> with <code>details</code> listing each field. The database runs on a free hosting tier and can be unreachable. Then you receive <code>503</code>, a <code>Retry-After</code> header, and <code>"retryable": true</code>. Wait that many seconds and repeat the request. Use <code>GET /api/status</code> to ask whether the database is up: it always answers <code>200</code>.</p>
+
+    <h2 id="data">Reading the data</h2>
+    <ul>
+      <li><strong>No BMKG event id.</strong> BMKG's feeds do not publish one, so <code>source_event_id</code> is derived from the origin time and epicentre (<code>derived:2026-10-11T21:34:53Z|0.64,121.75</code>). A revised magnitude updates the same record. A revised origin time or position is stored as a new record.</li>
+      <li><strong>Tsunami fields.</strong> <code>tsunami_potential</code> is <code>true</code> or <code>false</code> only when BMKG's text says so. It is <code>null</code> when BMKG said nothing about tsunamis (for example on felt-quake notices), and <code>null</code> is not an all-clear. <code>tsunami_note</code> always holds BMKG's original wording.</li>
+      <li><strong>Missing values are <code>null</code>.</strong> Heiz never fills in values BMKG did not send.</li>
+      <li><strong>Times</strong> are ISO 8601. <code>occurred_at</code> is BMKG's origin time in UTC.</li>
+    </ul>
+
+    <h2 id="endpoints">Endpoints</h2>
+    <div id="endpoint-list"></div>
+
+    <h2 id="credit">Credit and limits</h2>
+    <p>Earthquake data: BMKG, <a href="https://data.bmkg.go.id/gempabumi/">data.bmkg.go.id/gempabumi</a>. Heiz is an educational project, not an official or early-warning service, and it does not predict earthquakes. For official information use <a href="https://www.bmkg.go.id/">bmkg.go.id</a>.</p>
+  </main>
+</div>
+<footer class="site-footer" data-component="site-footer"><a href="/">Heiz</a></footer>
+<script type="module" src="/assets/js/pages/guide.js"></script>
+</body>
+</html>

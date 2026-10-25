@@ -1,0 +1,20 @@
+/* Splash: shown while the page confirms the service and database are reachable. */
+.splash { position: fixed; inset: 0; z-index: 4000; display: grid; place-items: center; padding: 1rem;
+  background: var(--basalt); color: var(--on-dark); --focus: var(--accent); transition: opacity .45s ease, visibility .45s;
+  animation: splash-away .01s 9s forwards; }
+.splash.leaving { opacity: 0; visibility: hidden; }
+@keyframes splash-away { to { opacity: 0; visibility: hidden; } }
+.splash-card { width: min(560px, 100%); display: grid; gap: 1rem; padding: 2rem 1.6rem 1.6rem; border: 1px solid var(--line);
+  background: rgba(17, 20, 12, .86); border-radius: 6px; --tex-color: rgba(250, 250, 100, .06); }
+.splash-logo { width: min(260px, 70%); height: auto; display: block; }
+.splash-trails { width: 100%; height: 120px; display: block; background: #0c0f08; border: 1px solid var(--line); border-radius: var(--radius); }
+.splash-step { margin: 0; font: 700 1.15rem var(--display); }
+.splash-detail { margin: 0; color: var(--on-dark-muted); min-height: 1.5em; }
+.splash-checks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.splash-checks li { font-size: .88rem; padding: .4rem .5rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--on-dark-muted); }
+.splash-checks li::before { content: "\2026  "; }
+.splash-checks li[data-state="ok"] { color: var(--ok); border-color: var(--ok); } .splash-checks li[data-state="ok"]::before { content: "\2713  "; }
+.splash-checks li[data-state="bad"] { color: var(--bad); border-color: var(--bad); } .splash-checks li[data-state="bad"]::before { content: "\2715  "; }
+.splash-checks li[data-state="skip"]::before { content: "\2013  "; }
+.splash-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+@media (max-width: 480px) { .splash-checks { grid-template-columns: 1fr; } }

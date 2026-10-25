@@ -24,6 +24,9 @@ class EarthquakeEvent(Base):
     magnitude: Mapped[Decimal | None] = mapped_column(Numeric(4, 2))
     depth_km: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     tsunami_potential: Mapped[bool | None] = mapped_column(Boolean)
+    tsunami_note: Mapped[str | None] = mapped_column(Text)    # BMKG "Potensi" text, verbatim
+    felt_text: Mapped[str | None] = mapped_column(Text)       # BMKG "Dirasakan" text, verbatim
+    shakemap_code: Mapped[str | None] = mapped_column(String(100))
     source_url: Mapped[str | None] = mapped_column(Text)
     source_attribution: Mapped[str] = mapped_column(String(200), default="BMKG")
     raw_payload: Mapped[dict | None] = mapped_column(JsonType)
@@ -36,3 +39,12 @@ class EarthquakeEvent(Base):
     @property
     def source_code(self) -> str:
         return self.source.code
+
+    @property
+    def shakemap_url(self) -> str | None:
+        code = self.shakemap_code
+        if not code:
+            return None
+        if not code.lower().endswith((".jpg", ".jpeg", ".png")):
+            code += ".jpg"
+        return f"https://static.bmkg.go.id/{code}"

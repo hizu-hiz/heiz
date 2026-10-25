@@ -1,0 +1,24 @@
+/* Design tokens. Brand colours come from the Heiz logo gradient (#2c331f -> #fafa64).
+   Fonts: Bricolage Grotesque and Atkinson Hyperlegible, both SIL OFL (see ../fonts). */
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 200 800; font-display: swap;
+  src: url("../fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: swap;
+  src: url("../fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: swap;
+  src: url("../fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --olive: #2c331f; --accent: #fafa64; --accent-hover: #ffff93; --accent-ink: #1b1d08;
+  --basalt: #11140c; --basalt-2: #191d11; --basalt-3: #232819; --line: #323a22;
+  --on-dark: #eff2e6; --on-dark-muted: #aab491;
+  --tide: #eef0e3; --tide-2: #dde1cb; --ink: #1a2010; --ink-muted: #4a5440; --link: #3a4d0b; --link-dark: #d3e58f;
+  --depth-shallow: #fafa64; --depth-mid: #f0a04b; --depth-deep: #d9568f; --depth-vdeep: #8f7bf0; --depth-unknown: #aab491;
+  --ok: #58c98f; --warn: #fafa64; --bad: #ff7a6b;
+  --focus: #1a2010;
+  --rail-w: 400px;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 4px;
+}
+.on-dark { --focus: var(--accent); }

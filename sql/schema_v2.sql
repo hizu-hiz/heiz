@@ -1,3 +1,6 @@
+-- HEIZ DATABASE, schema v2 (complete, for a FRESH database)
+-- Existing v1 databases: use sql/003_migration_v2.sql instead.
+
 BEGIN;
 
 -- DATA SOURCES
@@ -78,7 +81,10 @@ CREATE TABLE IF NOT EXISTS earthquake_events (
     magnitude           NUMERIC(4,2),
     depth_km            NUMERIC(8,2),
 
-    tsunami_potential   BOOLEAN,
+    tsunami_potential   BOOLEAN,          -- true/false only when BMKG's text says so; NULL = no statement
+    tsunami_note        TEXT,             -- BMKG "Potensi" text, verbatim
+    felt_text           TEXT,             -- BMKG "Dirasakan" text, verbatim
+    shakemap_code       VARCHAR(100),     -- BMKG shakemap file name
 
     source_url          TEXT,
     source_attribution  VARCHAR(200) NOT NULL DEFAULT 'BMKG',
@@ -184,8 +190,18 @@ CREATE INDEX IF NOT EXISTS idx_earthquake_events_source
 CREATE INDEX IF NOT EXISTS idx_event_updates_event_changed
     ON event_updates (event_id, changed_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_earthquake_events_raw_payload
-    ON earthquake_events USING GIN (raw_payload);
+CREATE INDEX IF NOT EXISTS idx_earthquake_events_magnitude
+    ON earthquake_events (magnitude DESC) WHERE magnitude IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_earthquake_events_imported_at
+    ON earthquake_events (imported_at);
+
+CREATE INDEX IF NOT EXISTS idx_event_updates_changed_at
+    ON event_updates (changed_at);
+
+CREATE INDEX IF NOT EXISTS idx_sync_logs_started_at
+    ON sync_logs (started_at);
+-- No GIN index on raw_payload: the app never queries inside it and GIN indexes are large.
 
 -- INITIAL DATA
 -- Register BMKG as the first data source.
@@ -209,5 +225,14 @@ ON CONFLICT (code) DO UPDATE SET
     description = EXCLUDED.description,
     is_active = EXCLUDED.is_active,
     updated_at = CURRENT_TIMESTAMP;
+
+-- Block Supabase's public Data API (anon key) from these The API connects with a direct
+-- database role, which bypasses RLS, so enabling RLS with no policies only closes the side door.
+ALTER TABLE data_sources      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_logs         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE earthquake_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE regions           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_regions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_updates     ENABLE ROW LEVEL SECURITY;
 
 COMMIT;

@@ -76,6 +76,9 @@ class EarthquakeOut(BaseModel):
     magnitude: float | None
     depth_km: float | None
     tsunami_potential: bool | None
+    tsunami_note: str | None
+    felt_text: str | None
+    shakemap_url: str | None
     source_url: str | None
     source_attribution: str
     imported_at: datetime

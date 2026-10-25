@@ -1,0 +1,43 @@
+/* Reset, typography, buttons, form controls, utilities. Page-specific rules live in their own files. */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { color-scheme: dark light; }
+body { margin: 0; font: 400 1rem/1.55 var(--body); background: var(--tide); color: var(--ink); }
+h1, h2, h3, h4 { font-family: var(--display); line-height: 1.1; margin: 0; letter-spacing: -0.01em; }
+a { color: var(--link); text-underline-offset: 0.18em; }
+.on-dark a, a.on-dark { color: var(--link-dark); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+button { font: inherit; cursor: pointer; }
+img { max-width: 100%; height: auto; }
+.skip { position: absolute; left: -999px; top: 0; background: var(--accent); color: var(--accent-ink); padding: .6rem 1rem; z-index: 3000; }
+.skip:focus { left: 0; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--ink-muted); } .on-dark .muted, .muted.on-dark { color: var(--on-dark-muted); }
+.small { font-size: .86rem; }
+
+.btn { border: 1.5px solid currentColor; background: transparent; color: inherit; border-radius: var(--radius);
+  padding: .5rem .9rem; font-weight: 700; min-height: 40px; }
+.btn:hover { background: rgba(127,127,127,.14); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.danger { color: var(--bad); }
+.btn.small { min-height: 32px; padding: .2rem .6rem; font-size: .85rem; }
+.btn[disabled], .btn[aria-busy="true"] { opacity: .55; cursor: not-allowed; }
+
+.field { display: grid; gap: .3rem; }
+.field label { font-weight: 700; }
+.field .hint { font-size: .85rem; color: var(--ink-muted); } .on-dark .field .hint { color: var(--on-dark-muted); }
+input[type="text"], input[type="password"], input[type="number"], select {
+  font: 500 1rem var(--mono); padding: .6rem .7rem; background: #fff; color: var(--ink);
+  border: 1.5px solid var(--ink); border-radius: var(--radius); min-height: 42px; width: 100%; }
+.on-dark input[type="text"], .on-dark input[type="password"], .on-dark input[type="number"], .on-dark select {
+  background: var(--basalt-2); color: var(--on-dark); border-color: var(--line); }
+input[aria-invalid="true"] { border-color: var(--bad); }
+
+/* Boot safety nets: if scripts never run, the splash and the hidden page must not trap the visitor. */
+html.splashing .page { visibility: hidden; animation: reveal .01s 9s forwards; }
+@keyframes reveal { to { visibility: visible; } }
+.boot-fallback { position: fixed; z-index: 5000; inset: auto 1rem 1rem 1rem; max-width: 560px; margin: 0 auto; padding: .9rem 1.1rem;
+  background: var(--basalt-2); color: var(--on-dark); border: 1.5px solid var(--bad); border-radius: var(--radius);
+  opacity: 0; pointer-events: none; animation: reveal-fallback .01s 4s forwards; }
+@keyframes reveal-fallback { to { opacity: 1; pointer-events: auto; } }

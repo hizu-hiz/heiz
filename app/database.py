@@ -30,7 +30,7 @@ def get_engine() -> Engine:
         # Serverless: let Supabase's pooler do the pooling, keep no idle connections here.
         poolclass=NullPool,
         # prepare_threshold=None keeps psycopg compatible with PgBouncer transaction mode.
-        connect_args={"prepare_threshold": None, "connect_timeout": 10},
+        connect_args={"prepare_threshold": None, "connect_timeout": 5},
     )
 
 

@@ -4,10 +4,11 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, IntegrityError, SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger("heiz")
+RETRY_AFTER_SECONDS = 30
 
 
 class AppError(Exception):
@@ -51,11 +52,15 @@ def register_error_handlers(app: FastAPI) -> None:
             _body("conflict", "The change conflicts with an existing record or a database rule."),
             status_code=409)
 
-    @app.exception_handler(OperationalError)
-    async def _db_unavailable(_: Request, exc: OperationalError):
+    @app.exception_handler(DBAPIError)
+    async def _db_unavailable(_: Request, exc: DBAPIError):
+        """Connection-level failures (paused/overloaded free-tier DB). UIs should retry with backoff."""
         log.error("database unavailable: %s", type(exc.orig).__name__)
-        return JSONResponse(_body("database_unavailable", "The database is temporarily unavailable."),
-                            status_code=503)
+        body = _body("database_unavailable",
+                     "The database is temporarily unavailable. Try again shortly.")
+        body["error"].update(retryable=True, retry_after_seconds=RETRY_AFTER_SECONDS)
+        return JSONResponse(body, status_code=503,
+                            headers={"Retry-After": str(RETRY_AFTER_SECONDS)})
 
     @app.exception_handler(SQLAlchemyError)
     async def _db_error(_: Request, exc: SQLAlchemyError):

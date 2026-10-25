@@ -17,7 +17,7 @@ from app.errors import AppError
 from app.models import DataSource, EarthquakeEvent, EventUpdate
 from app.schemas.earthquake import (EarthquakeCreate, EarthquakeDetail, EarthquakeList,
                                     EarthquakeOut, EarthquakePatch)
-from app.security import require_api_key
+from app.security import require_writer
 
 router = APIRouter(prefix="/api/earthquakes", tags=["earthquakes"])
 
@@ -112,7 +112,7 @@ def get_earthquake(event_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=EarthquakeOut, status_code=201,
-             dependencies=[Depends(require_api_key)])
+             dependencies=[Depends(require_writer)])
 def create_earthquake(body: EarthquakeCreate, response: Response, db: Session = Depends(get_db)):
     src = _manual_source(db)
     event = EarthquakeEvent(
@@ -128,7 +128,7 @@ def create_earthquake(body: EarthquakeCreate, response: Response, db: Session = 
     return event
 
 
-@router.put("/{event_id}", response_model=EarthquakeOut, dependencies=[Depends(require_api_key)])
+@router.put("/{event_id}", response_model=EarthquakeOut, dependencies=[Depends(require_writer)])
 def replace_earthquake(event_id: int, body: EarthquakeCreate, db: Session = Depends(get_db)):
     event = _get_or_404(db, event_id)
     _require_manual(event)
@@ -137,7 +137,7 @@ def replace_earthquake(event_id: int, body: EarthquakeCreate, db: Session = Depe
     return event
 
 
-@router.patch("/{event_id}", response_model=EarthquakeOut, dependencies=[Depends(require_api_key)])
+@router.patch("/{event_id}", response_model=EarthquakeOut, dependencies=[Depends(require_writer)])
 def update_earthquake(event_id: int, body: EarthquakePatch, db: Session = Depends(get_db)):
     event = _get_or_404(db, event_id)
     _require_manual(event)
@@ -146,7 +146,7 @@ def update_earthquake(event_id: int, body: EarthquakePatch, db: Session = Depend
     return event
 
 
-@router.delete("/{event_id}", status_code=204, dependencies=[Depends(require_api_key)])
+@router.delete("/{event_id}", status_code=204, dependencies=[Depends(require_writer)])
 def delete_earthquake(event_id: int, db: Session = Depends(get_db)):
     event = _get_or_404(db, event_id)
     _require_manual(event)

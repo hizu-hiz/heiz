@@ -1,0 +1,12 @@
+/* Decorative texture: hexagon or diamond lattice drawn as a mask so the colour is a plain CSS value.
+   Solid lines only. Usage: <section class="tex tex-hex"> ... </section> (content stays above the texture). */
+.tex { position: relative; isolation: isolate; --tex-color: rgba(250, 250, 100, .09); }
+.tex::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--tex-color);
+  -webkit-mask-repeat: repeat; mask-repeat: repeat; }
+.tex-hex::before { -webkit-mask-image: url("../img/tex-hex.svg"); mask-image: url("../img/tex-hex.svg");
+  -webkit-mask-size: 31.18px 54px; mask-size: 31.18px 54px; }
+.tex-diamond::before { -webkit-mask-image: url("../img/tex-diamond.svg"); mask-image: url("../img/tex-diamond.svg");
+  -webkit-mask-size: 36px 36px; mask-size: 36px 36px; }
+.tex.on-light { --tex-color: rgba(58, 77, 11, .10); }
+/* Contour canvas: positioned by its container, never intercepts clicks. */
+canvas[data-contour] { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; display: block; }

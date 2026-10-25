@@ -55,6 +55,9 @@
 | `imported_at` | `timestamptz` |  |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
+| `tsunami_note` | `text` |  Nullable |
+| `felt_text` | `text` |  Nullable |
+| `shakemap_code` | `varchar` |  Nullable |
 
 ## Table `regions`
 

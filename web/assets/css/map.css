@@ -1,0 +1,35 @@
+/* Leaflet theming and the animated rings. Leaflet's own stylesheet is vendored separately. */
+.leaflet-container { font-family: var(--body); background: var(--basalt); }
+.leaflet-control-layers, .leaflet-bar a { background: var(--basalt-2); color: var(--on-dark); border-color: var(--line) !important; }
+.leaflet-control-layers-expanded { padding: .6rem .8rem; }
+.leaflet-control-layers label { color: var(--on-dark); }
+.leaflet-control-attribution { background: rgba(17,20,12,.82) !important; color: var(--on-dark-muted); }
+.leaflet-control-attribution a { color: var(--link-dark); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--basalt-2); color: var(--on-dark); border-radius: 6px; }
+.leaflet-popup-content { margin: 12px 14px; font-size: .92rem; line-height: 1.45; }
+.pop h3 { font-size: 1.5rem; margin-bottom: .2rem; }
+.pop p { margin: .25rem 0; }
+.pop .tsu { border-left: 3px solid var(--accent); padding-left: .5rem; }
+.pop .tsu.alert { border-color: var(--bad); font-weight: 700; }
+.pop a { color: var(--link-dark); }
+.pop .small { color: var(--on-dark-muted); font-size: .82rem; }
+.glow-pane { filter: blur(7px); }
+
+.pulse, .ripple { position: relative; display: block; width: 100%; height: 100%; pointer-events: none; }
+.pulse::before, .pulse::after, .ripple::before, .ripple::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--c, var(--accent)); opacity: 0; transform: scale(.2); }
+.pulse::before { animation: ring var(--dur, 3.2s) ease-out infinite; }
+.pulse::after { animation: ring var(--dur, 3.2s) ease-out infinite calc(var(--dur, 3.2s) / 2); }
+.ripple::before { animation: ring 1.8s ease-out 3; }
+.ripple::after { animation: ring 1.8s ease-out .5s 3; }
+@keyframes ring { 0% { opacity: .95; transform: scale(.2); } 100% { opacity: 0; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .pulse::before, .pulse::after, .ripple::before, .ripple::after { animation: none; opacity: .5; transform: scale(.6); } }
+
+.legend { position: absolute; z-index: 900; left: calc(var(--rail-w) + 8px); bottom: 14px; background: rgba(17,20,12,.88);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .8rem; font-size: .82rem; color: var(--on-dark); }
+.legend h2 { font: 700 .85rem var(--display); margin-bottom: .35rem; }
+.legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
+.legend li { display: flex; gap: .5rem; align-items: center; }
+.legend i { width: .9rem; height: .9rem; border-radius: 50%; display: inline-block; }
+.legend p { margin: .45rem 0 0; color: var(--on-dark-muted); max-width: 24ch; }
+@media (max-width: 860px) { .legend { left: 8px; bottom: 8px; padding: .4rem .6rem; } .legend p { display: none; } }

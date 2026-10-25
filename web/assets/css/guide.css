@@ -1,0 +1,28 @@
+/* API guide page. */
+.guide { max-width: 860px; margin: 0 auto; padding: 1.6rem 1.2rem 5rem; }
+.guide .site-header { margin-bottom: 2rem; }
+.guide-hero { position: relative; isolation: isolate; overflow: hidden; padding: 2rem 1.4rem; margin: 0 -1.2rem 2rem; background: var(--basalt); color: var(--on-dark); --focus: var(--accent); }
+.guide-hero .brand { color: var(--on-dark); }
+.guide h1 { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: .6rem; }
+.guide h2 { font-size: 1.6rem; margin: 3rem 0 .8rem; }
+.guide p, .guide li { max-width: 68ch; }
+.guide code { font: 500 .88em var(--mono); background: var(--tide-2); padding: .1em .35em; border-radius: 3px; }
+.guide .base { display: inline-block; margin: .4rem 0; }
+.ep { border-top: 1.5px solid var(--ink); }
+.ep:last-of-type { border-bottom: 1.5px solid var(--ink); }
+.ep summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 5.4rem 1fr; gap: .4rem 1rem; align-items: baseline; padding: .8rem .2rem; }
+.ep summary::-webkit-details-marker { display: none; }
+.ep summary:hover { background: rgba(0,0,0,.04); }
+.verb { font: 800 .9rem var(--display); }
+.verb.GET { color: #155d48; } .verb.POST { color: #7a4d00; } .verb.PUT, .verb.PATCH { color: #5b3aa8; } .verb.DELETE { color: #a02a1f; }
+.ep .path { font: 600 .98rem var(--mono); overflow-wrap: anywhere; }
+.ep .what { grid-column: 2; color: var(--ink-muted); font-size: .94rem; }
+.ep .tier { font-size: .8rem; font-weight: 700; margin-left: .5rem; padding: .05rem .4rem; border: 1.5px solid currentColor; border-radius: 3px; }
+.ep .body { padding: .2rem .2rem 1.4rem 6.8rem; display: grid; gap: .8rem; }
+.ep .body h4 { margin: 0 0 .2rem; font: 700 .95rem var(--display); }
+.ep .body pre { margin: 0; background: var(--basalt); color: var(--on-dark); border-radius: var(--radius); padding: .8rem 1rem; overflow-x: auto; font: 500 .82rem/1.5 var(--mono); }
+.ep .body ul { margin: .2rem 0; padding-left: 1.1rem; }
+.ep .body .btn { margin-top: .5rem; }
+table.simple { border-collapse: collapse; width: 100%; margin: .8rem 0; font-size: .95rem; }
+table.simple th, table.simple td { border-bottom: 1px solid var(--tide-2); text-align: left; padding: .5rem .6rem .5rem 0; vertical-align: top; }
+@media (max-width: 640px) { .ep summary { grid-template-columns: 1fr; } .ep .what { grid-column: 1; } .ep .body { padding-left: .2rem; } }

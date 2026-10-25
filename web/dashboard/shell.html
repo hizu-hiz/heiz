@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heiz control room</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#11140c">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/heiz-logo-accent.svg">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/textures.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/assets/css/map.css">
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+  
+</head>
+<body class="ops on-dark">
+<div class="boot-fallback" id="boot-fallback" role="alert">The page's scripts did not load. Reload the page. If it keeps happening, the server may be sending script files with the wrong type (see the README troubleshooting note).</div>
+<header class="ops-head">
+  <a class="brand" href="/dashboard/" aria-label="Heiz control room"><img src="/assets/img/heiz-logo-accent.svg" alt="" width="32" height="22"><span>Control room</span></a>
+  <div class="head-right">
+    <span id="who" class="muted"></span>
+    <button class="btn small" id="refresh-now" type="button">Refresh now</button>
+    <button class="btn small" id="edit" type="button" aria-pressed="false">Edit layout</button>
+    <button class="btn small" id="reset" type="button" hidden>Reset layout</button>
+    <button class="btn small" id="signout" type="button">Sign out</button>
+    <a href="/">Public site</a>
+  </div>
+</header>
+<main class="ops-main tex tex-diamond" id="main">
+  <p class="banner" id="banner" role="status" hidden></p>
+  <div class="palette" id="palette" hidden></div>
+  <div class="board" id="board"></div>
+</main>
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
+<script type="module" src="/assets/js/pages/dashboard.js"></script>
+</body>
+</html>

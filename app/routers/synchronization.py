@@ -1,4 +1,4 @@
-"""POST /api/sync: protected, throttled trigger for the BMKG importer.
+"""POST /api/sync: admin-only (Bearer token), throttled trigger for the BMKG importer.
 
 Serverless functions do not run continuously, so nothing here is automatic: a person or an
 external scheduler must call this endpoint."""
@@ -13,13 +13,13 @@ from app.database import get_db
 from app.errors import AppError
 from app.models import DataSource, SyncLog
 from app.schemas.source import SyncLogOut, SyncRequest
-from app.security import require_api_key
+from app.security import require_admin
 from app.services import bmkg
 
 router = APIRouter(prefix="/api", tags=["synchronization"])
 
 
-@router.post("/sync", response_model=list[SyncLogOut], dependencies=[Depends(require_api_key)])
+@router.post("/sync", response_model=list[SyncLogOut], dependencies=[Depends(require_admin)])
 def trigger_sync(body: SyncRequest | None = None, db: Session = Depends(get_db)):
     settings = get_settings()
     feeds = (body.feeds if body and body.feeds else list(BMKG_FEED_NAMES))

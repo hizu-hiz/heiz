@@ -11,6 +11,10 @@
     {
       "key": "apiKey",
       "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
     }
   ],
   "item": [
@@ -31,6 +35,23 @@
       }
     },
     {
+      "name": "Status (never 5xx)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "status"
+          ]
+        }
+      }
+    },
+    {
       "name": "Health DB",
       "request": {
         "method": "GET",
@@ -43,6 +64,36 @@
           "path": [
             "health",
             "db"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Landing page",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": []
+        }
+      }
+    },
+    {
+      "name": "Guide page",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/guide",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "guide"
           ]
         }
       }
@@ -71,7 +122,7 @@
       }
     },
     {
-      "name": "List earthquakes M>=5 BMKG",
+      "name": "List M>=5 BMKG",
       "request": {
         "method": "GET",
         "header": [],
@@ -92,6 +143,29 @@
             {
               "key": "source",
               "value": "BMKG"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List invalid limit (400)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes?limit=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "0"
             }
           ]
         }
@@ -134,7 +208,7 @@
       }
     },
     {
-      "name": "Create (201)",
+      "name": "Create manual (201)",
       "request": {
         "method": "POST",
         "header": [
@@ -220,7 +294,7 @@
       }
     },
     {
-      "name": "PUT (replace) - set id of a MANUAL record",
+      "name": "PUT - id of a MANUAL record",
       "request": {
         "method": "PUT",
         "header": [
@@ -251,7 +325,7 @@
       }
     },
     {
-      "name": "PATCH - set id of a MANUAL record",
+      "name": "PATCH - id of a MANUAL record",
       "request": {
         "method": "PATCH",
         "header": [
@@ -282,7 +356,38 @@
       }
     },
     {
-      "name": "DELETE - set id of a MANUAL record",
+      "name": "PATCH imported record (403) - id of a BMKG record",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/earthquakes/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "earthquakes",
+            "1"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"magnitude\": 3.1\n}"
+        }
+      }
+    },
+    {
+      "name": "DELETE - id of a MANUAL record",
       "request": {
         "method": "DELETE",
         "header": [
@@ -345,7 +450,7 @@
       }
     },
     {
-      "name": "Trigger sync",
+      "name": "Sync with writer key (401)",
       "request": {
         "method": "POST",
         "header": [
@@ -370,7 +475,174 @@
         },
         "body": {
           "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Trigger sync (admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/sync",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "sync"
+          ]
+        },
+        "body": {
+          "mode": "raw",
           "raw": "{\n  \"feeds\": [\n    \"gempaterkini\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Admin whoami",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/whoami",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "whoami"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/overview",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "overview"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin overview without token (401)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/overview",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "overview"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cleanup PREVIEW (dry run)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/maintenance/prune",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "maintenance",
+            "prune"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dry_run\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Dashboard login (sets cookie)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/session",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "session"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard logout",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/session",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "session"
+          ]
         }
       }
     }

@@ -37,7 +37,7 @@ def test_get_not_found(client):
 
 def test_write_requires_key(client):
     assert client.post("/api/earthquakes", json=VALID).status_code == 401
-    assert client.post("/api/earthquakes", json=VALID, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.post("/api/earthquakes", json=VALID, headers={"X-API-Key": "wrong-wrong-wrong-wrong-wrong"}).status_code == 401
 
 
 def test_create_rejects_invalid(client):
@@ -115,6 +115,7 @@ def test_unknown_route_and_method(client):
 def test_writes_disabled_without_key(client, monkeypatch):
     from app import config
     monkeypatch.setattr(config.get_settings(), "heiz_api_key", None)
+    monkeypatch.setattr(config.get_settings(), "heiz_admin_token", None)
     assert create(client).status_code == 503
 
 

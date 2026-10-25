@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" class="splashing">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heiz | Indonesian earthquakes from BMKG</title>
+  <meta name="description" content="Heiz stores earthquake reports published by BMKG and serves them as a JSON API. Educational project, not an official or early-warning service.">
+  <meta name="theme-color" content="#11140c">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/heiz-logo-accent.svg">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/textures.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/splash.css">
+  <link rel="stylesheet" href="/assets/css/map.css">
+  <link rel="stylesheet" href="/assets/css/landing.css">
+  <noscript><style>#splash { display: none; } html.splashing .page { visibility: visible; }</style></noscript>
+</head>
+<body>
+<div class="splash tex tex-hex" id="splash" role="status" aria-live="polite" aria-label="Loading Heiz">
+  <canvas data-contour data-contour-theme="dark" aria-hidden="true"></canvas>
+  <div class="splash-card tex tex-diamond">
+    <img class="splash-logo" src="/assets/img/heiz-logo-banner.svg" alt="Heiz" width="260" height="84">
+    <canvas class="splash-trails" aria-hidden="true"></canvas>
+    <p class="splash-step" data-splash-step>Starting</p>
+    <p class="splash-detail" data-splash-detail></p>
+    <ol class="splash-checks" aria-label="Start-up checks">
+      <li data-check="service">Service</li><li data-check="database">Database</li><li data-check="events">Earthquakes</li>
+    </ol>
+    <div class="splash-actions" hidden>
+      <button class="btn primary" type="button" data-splash-skip>Continue anyway</button>
+      <button class="btn" type="button" data-splash-retry>Check again now</button>
+    </div>
+  </div>
+</div>
+<div class="boot-fallback" id="boot-fallback" role="alert">
+  The page's scripts did not load. Reload the page. If it keeps happening, the server may be sending script files with the wrong type, see the troubleshooting note in the README.
+</div>
+
+<div class="page" id="page">
+<a class="skip" href="#try">Skip to the API examples</a>
+<main>
+  <section class="stage" aria-label="Recent earthquakes map">
+    <div id="map" role="region" aria-label="Map of recent earthquakes in Indonesia"></div>
+
+    <aside class="rail">
+      <div data-component="site-header" data-variant="brand"><a href="/">Heiz</a></div>
+      <h1>Indonesian earthquakes, as BMKG reports them</h1>
+      <p class="lede">A learning project that stores BMKG's public earthquake reports and serves them as a JSON API. Not an official or early-warning service.</p>
+
+      <p class="pill" id="status" data-state="idle" role="status">Checking the service</p>
+      <p class="notice" id="notice" role="status" hidden></p>
+
+      <dl class="facts" id="facts" aria-label="Summary">
+        <div><dt>last 24 hours</dt><dd data-fact="24h">-</dd></div>
+        <div><dt>M 5+ in 48 hours</dt><dd data-fact="m5">-</dd></div>
+        <div><dt>strongest in 48 hours</dt><dd data-fact="max">-</dd></div>
+      </dl>
+
+      <div class="actions">
+        <button class="btn primary" id="replay" type="button">Replay last 48 hours</button>
+        <button class="btn" id="refresh" type="button">Refresh</button>
+      </div>
+      <div class="replaybar" id="replaybar" hidden>
+        <progress id="replay-progress" max="1" value="0" aria-label="Replay progress"></progress>
+        <span id="replay-clock"></span>
+      </div>
+
+      <ol class="feed" id="feed" aria-label="Latest earthquakes"></ol>
+      <p class="pill" id="sync" data-state="idle"></p>
+    </aside>
+
+    <div class="legend" aria-label="Map legend">
+      <h2>Circle colour is depth, size is magnitude</h2>
+      <ul id="legend-list"></ul>
+      <p>Rings mark events from the last 24 hours.</p>
+    </div>
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="band tex tex-hex on-light" id="try">
+    <div class="wrap">
+      <div>
+        <h2>Call the API from here</h2>
+        <p class="intro">Reading is public and needs no key. These run against this server. Press Run to see the live response.</p>
+      </div>
+      <div class="try">
+        <div>
+          <ul data-examples></ul>
+          <fieldset class="filters">
+            <legend>Build your own filter</legend>
+            <div class="field"><label for="f-mag">Minimum magnitude</label><input id="f-mag" data-f-mag type="text" inputmode="decimal" maxlength="5" placeholder="e.g. 4.5" autocomplete="off"></div>
+            <div class="field"><label for="f-limit">How many (1 to 100)</label><input id="f-limit" data-f-limit type="text" inputmode="numeric" maxlength="3" value="5" autocomplete="off"></div>
+            <p class="hint small" data-f-hint style="grid-column:1/-1;margin:0"></p>
+          </fieldset>
+        </div>
+        <pre class="out" data-out tabindex="0" aria-live="polite" aria-label="API response">Press Run on any example.</pre>
+      </div>
+      <p><a href="/guide">Full endpoint guide</a> and the interactive <a href="/docs">Swagger reference</a>.</p>
+    </div>
+  </section>
+
+  <section class="band dark tex tex-diamond" id="limits">
+    <canvas data-contour data-contour-theme="dark" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <h2>What to know before relying on it</h2>
+      <div class="limits">
+        <div><h3>Where the data comes from</h3><p>Every record is a report published by BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Heiz stores it and does not measure or recalculate anything.</p></div>
+        <div><h3>Not for safety decisions</h3><p>Heiz does not predict earthquakes and is not a warning system. For official information use <a href="https://www.bmkg.go.id/">bmkg.go.id</a>.</p></div>
+        <div><h3>Data is not instant</h3><p>New events appear only after a sync from BMKG runs, so the map can lag behind BMKG. The status line shows when the last sync happened.</p></div>
+        <div><h3>The database can be down</h3><p>It runs on a free hosting tier. When it is unreachable the API answers 503 with a retry hint, and this page shows the last data saved on your device.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="site-footer" data-component="site-footer"><a href="/">Heiz</a></footer>
+</div>
+
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
+<script type="module" src="/assets/js/pages/landing.js"></script>
+</body>
+</html>
