@@ -220,10 +220,14 @@ def _same(a: Any, b: Any) -> bool:
 
 
 def upsert_event(db: Session, source: DataSource, ev: NormalizedEvent, feed: str,
-                 url: str, sync: SyncLog) -> str:
-    """Return 'created', 'updated' or 'unchanged'. Never overwrites a stored value with None."""
-    existing = db.scalar(select(EarthquakeEvent).where(
-        EarthquakeEvent.source_id == source.id, EarthquakeEvent.source_event_id == ev.key))
+                 url: str, sync: SyncLog, known: dict[str, EarthquakeEvent],
+                 audit: list[tuple[EarthquakeEvent, str, dict, str]]) -> str:
+    """Return 'created', 'updated' or 'unchanged'. Never overwrites a stored value with None.
+
+    `known` maps source_event_id -> row for every event this feed mentions (one SELECT for the whole feed, because
+    one query per record is what made syncs time out on Vercel: every query is a network round trip to the database).
+    Audit rows are queued in `audit` and written after one flush, so there is no per-record flush either."""
+    existing = known.get(ev.key)
 
     if existing is None:
         row = EarthquakeEvent(
@@ -235,9 +239,8 @@ def upsert_event(db: Session, source: DataSource, ev: NormalizedEvent, feed: str
             source_url=url, source_attribution="BMKG",
             raw_payload={feed: ev.raw}, imported_at=datetime.now(timezone.utc))
         db.add(row)
-        db.flush()
-        db.add(EventUpdate(event_id=row.id, sync_log_id=sync.id, change_type="created",
-                           changed_fields={}, note=f"Imported from BMKG feed '{feed}'"))
+        known[ev.key] = row
+        audit.append((row, "created", {}, f"Imported from BMKG feed '{feed}'"))
         return "created"
 
     changes: dict[str, dict] = {}
@@ -261,10 +264,49 @@ def upsert_event(db: Session, source: DataSource, ev: NormalizedEvent, feed: str
         return "unchanged"
     existing.updated_at = datetime.now(timezone.utc)
     corrected = bool({"magnitude", "depth_km"} & changes.keys())
-    db.add(EventUpdate(event_id=existing.id, sync_log_id=sync.id,
-                       change_type="corrected" if corrected else "updated",
-                       changed_fields=changes, note=f"Changed by BMKG feed '{feed}'"))
+    audit.append((existing, "corrected" if corrected else "updated", changes, f"Changed by BMKG feed '{feed}'"))
     return "updated"
+
+
+def _apply(db: Session, source: DataSource, feed: str, url: str, sync: SyncLog,
+           events: list[NormalizedEvent], isolate: bool) -> tuple[int, int, int]:
+    """Write normalized events. isolate=False: one SELECT, one flush for rows, one for audit rows (minimal round trips).
+    isolate=True: a savepoint per record (slow, used only to recover from a failure of the fast path)."""
+    created = updated = unchanged = 0
+    keys = list({e.key for e in events})
+    known: dict[str, EarthquakeEvent] = {}
+    if keys:
+        for row in db.scalars(select(EarthquakeEvent).where(EarthquakeEvent.source_id == source.id,
+                                                            EarthquakeEvent.source_event_id.in_(keys))):
+            known[row.source_event_id] = row                                                                #type: ignore
+    audit: list[tuple[EarthquakeEvent, str, dict, str]] = []
+    for ev in events:
+        if isolate:
+            local: list = []
+            try:
+                with db.begin_nested():
+                    outcome = upsert_event(db, source, ev, feed, url, sync, known, local)
+                    db.flush()
+                    for row, kind, changed, note in local:
+                        db.add(EventUpdate(event_id=row.id, sync_log_id=sync.id, change_type=kind, changed_fields=changed, note=note))
+            except Exception:
+                log.exception("record failed")
+                known.pop(ev.key, None)
+                continue
+        else:
+            outcome = upsert_event(db, source, ev, feed, url, sync, known, audit)
+        if outcome == "created":
+            created += 1
+        elif outcome == "updated":
+            updated += 1
+        else:
+            unchanged += 1
+    if not isolate:
+        db.flush()                                  # assigns ids to new rows
+        for row, kind, changed, note in audit:
+            db.add(EventUpdate(event_id=row.id, sync_log_id=sync.id, change_type=kind, changed_fields=changed, note=note))
+        db.flush()
+    return created, updated, unchanged
 
 
 def run_feed_sync(db: Session, source: DataSource, feed: str, settings: Settings,
@@ -283,24 +325,25 @@ def run_feed_sync(db: Session, source: DataSource, feed: str, settings: Settings
     try:
         records = extract_records(fetcher(url, settings))
         received = len(records)
+        parsed: list[tuple[int, NormalizedEvent]] = []
         for i, item in enumerate(records):
             try:
-                ev = normalize_record(item)
+                parsed.append((i, normalize_record(item)))
             except RecordError as exc:
                 invalid += 1
                 skipped += 1
                 problems.append(f"record {i}: {exc}")
-                continue
-            with db.begin_nested():  # a failing record rolls back alone
-                outcome = upsert_event(db, source, ev, feed, url, sync)
-            if outcome == "created":
-                created += 1
-            elif outcome == "updated":
-                updated += 1
-            else:
-                skipped += 1  # duplicate with no new information
+        try:
+            created, updated, unchanged = _apply(db, source, feed, url, sync, [e for _, e in parsed], isolate=False)
+        except Exception:
+            # Fast path (one transaction, few round trips) failed: redo record by record so one bad row
+            # cannot take the others down with it.
+            db.rollback()
+            log.warning("bulk apply failed for %s, retrying record by record", feed, exc_info=True)
+            created, updated, unchanged = _apply(db, source, feed, url, sync, [e for _, e in parsed], isolate=True)
+        skipped += unchanged
         if invalid:
-            status = "partial" if (created + updated + (skipped - invalid)) > 0 else "failed"
+            status = "partial" if (created + updated + unchanged) > 0 else "failed"
             problems = [f"{invalid} of {received} records were invalid"] + problems[:5]
         db.commit()
     except FeedError as exc:

@@ -33,17 +33,21 @@ def trigger_sync(body: SyncRequest | None = None, db: Session = Depends(get_db))
     if source is None or not source.is_active:
         raise AppError(409, "source_unavailable", "The BMKG data source is missing or disabled.")
 
+    # Throttle PER FEED, so the dashboard can sync the feeds one request at a time (each request stays well inside
+    # a serverless time limit) without the second request being refused because of the first.
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=settings.sync_min_interval_seconds)
-    recent = db.scalar(select(SyncLog).where(SyncLog.source_id == source.id,
-                                             SyncLog.started_at >= cutoff)
-                       .order_by(SyncLog.started_at.desc()).limit(1))
-    if recent is not None:
-        started = recent.started_at if recent.started_at.tzinfo else \
-            recent.started_at.replace(tzinfo=timezone.utc)
-        wait = max(1, int((started + timedelta(seconds=settings.sync_min_interval_seconds)
-                           - datetime.now(timezone.utc)).total_seconds()) + 1)
-        raise AppError(429, "sync_throttled",
-                       f"A sync ran recently. Try again in about {wait} seconds.",
-                       headers={"Retry-After": str(wait)})
+    for feed in feeds:
+        recent = db.scalar(select(SyncLog).where(SyncLog.source_id == source.id,
+                                                 SyncLog.request_url == bmkg.feed_url(settings, feed),
+                                                 SyncLog.started_at >= cutoff)
+                           .order_by(SyncLog.started_at.desc()).limit(1))
+        if recent is not None:
+            started = recent.started_at if recent.started_at.tzinfo else \
+                recent.started_at.replace(tzinfo=timezone.utc)
+            wait = max(1, int((started + timedelta(seconds=settings.sync_min_interval_seconds)
+                               - datetime.now(timezone.utc)).total_seconds()) + 1)
+            raise AppError(429, "sync_throttled",
+                           f"Feed '{feed}' was synced recently. Try again in about {wait} seconds.",
+                           headers={"Retry-After": str(wait)})
 
     return [bmkg.run_feed_sync(db, source, feed, settings) for feed in feeds]

@@ -2,9 +2,8 @@
 
 ![Heiz ERD](Heiz-ERD.png)
 
-Schema v2 (after the upgrade): `earthquake_events` gained `tsunami_note`, `felt_text` and `shakemap_code`. Column details: [schema-columns.md](schema-columns.md)
-(exported from DBeaver by the owner on 2026-10-17, confirming the upgrade ran). DBeaver diagram file: [Heiz-ERD.erd](Heiz-ERD.erd).
-`Heiz-ERD.png` is rendered by `python tools/render_erd.py` from the column listing (needs Graphviz); replace it with a DBeaver image export if you prefer that look.
+Schema v2 (after the upgrade): `earthquake_events` gained `tsunami_note`, `felt_text` and `shakemap_code`. Column details: [schema-columns.md](schema-columns.md).
+DBeaver diagram file: [Heiz-ERD.erd](Heiz-ERD.erd).
 DDL for a fresh database: [../sql/schema_v2.sql](../sql/schema_v2.sql).
 
 | Table | Purpose | Primary key |

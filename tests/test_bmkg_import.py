@@ -217,3 +217,29 @@ def test_sync_endpoint_runs_and_throttles(client, monkeypatch):
     r2 = client.post("/api/sync", headers=ADMIN)
     assert r2.status_code == 429 and "retry-after" in r2.headers
     assert client.get("/api/sync-logs").json()["pagination"]["total"] == 1
+
+
+def test_sync_uses_a_constant_number_of_queries(Session):
+    from sqlalchemy import event, select
+    from app.models import DataSource
+    records = [{**M5, "DateTime": f"2026-10-0{1 + i % 9}T0{i % 9}:00:00+00:00", "Coordinates": f"-{i}.5,1{i}.5"} for i in range(40)]
+    counts = []
+    for payload in (records[:10], records):
+        n = {"q": 0}
+        with Session() as db:
+            event.listen(db.get_bind(), "before_cursor_execute", lambda c, cur, stmt, *a, n=n: n.__setitem__("q", n["q"] + (stmt.lstrip().upper().startswith(("SELECT", "SAVEPOINT", "RELEASE")))))
+            src = db.scalar(select(DataSource).where(DataSource.code == "BMKG")) or DataSource(code="BMKG", name="BMKG", base_url="https://x")
+            db.add(src); db.commit()
+            bmkg.run_feed_sync(db, src, "gempaterkini", get_settings(), fetcher=lambda u, s, p=payload: p)
+        counts.append(n["q"])
+    # Lookups and savepoints must not grow with the number of records (INSERTs are batched by PostgreSQL's driver; SQLite runs them singly).
+    assert counts[1] - counts[0] == 0, counts
+
+
+def test_throttle_is_per_feed(client, monkeypatch):
+    original = bmkg.run_feed_sync
+    monkeypatch.setattr("app.routers.synchronization.bmkg.run_feed_sync",
+                        lambda db, source, feed, settings, fetcher=None: original(db, source, feed, settings, fetcher=lambda u, s: [M5]))
+    assert client.post("/api/sync", json={"feeds": ["gempaterkini"]}, headers=ADMIN).status_code == 200
+    assert client.post("/api/sync", json={"feeds": ["gempadirasakan"]}, headers=ADMIN).status_code == 200
+    assert client.post("/api/sync", json={"feeds": ["gempaterkini"]}, headers=ADMIN).status_code == 429

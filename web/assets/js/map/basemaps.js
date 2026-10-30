@@ -10,13 +10,16 @@ export const DEFAULT_BASEMAP = 'Dark gray';
 /** Bundled country outlines drawn as vector polygons: no network needed after the page itself has loaded. */
 function outlineLayer(L) {
   const group = L.layerGroup();
+  const paneName = 'outline';
   let loaded = false;
   group.on('add', async () => {
+    const map = group._map || null;
+    if (map && !map.getPane(paneName)) { map.createPane(paneName).style.zIndex = 250; }   // below overlayPane (400): quake circles always draw on top
     if (loaded) return;
     loaded = true;
     try {
       const data = await (await fetch(OUTLINE_URL, { credentials: 'same-origin' })).json();
-      L.geoJSON(data, { interactive: false, style: { color: '#4b4b86', weight: 1, fillColor: '#1e1e36', fillOpacity: 1 } }).addTo(group);
+      L.geoJSON(data, { pane: paneName, interactive: false, style: { color: '#4b4b86', weight: 1, fillColor: '#1e1e36', fillOpacity: 1 } }).addTo(group);
     } catch { loaded = false; }
   });
   group.options = { attribution: 'Outlines: Natural Earth (public domain)' };
